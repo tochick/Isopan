@@ -1,0 +1,12 @@
+{
+  "name": "isopan-portal-interno",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node smoke-test.cjs && node server-test.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

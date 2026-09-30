@@ -1,0 +1,22 @@
+name: Comprobaciones de la app
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprobar interfaz
+        run: node smoke-test.cjs
+      - name: Comprobar servidor y permisos
+        run: node server-test.cjs

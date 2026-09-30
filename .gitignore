@@ -1,0 +1,21 @@
+data/
+.qa-data/
+*.tmp
+
+# Documentos originales de planta y herramientas temporales locales
+/Base de datos/
+/.skill-build/
+/node_modules/
+/coverage/
+*.log
+
+# Credenciales y configuración privada del servidor
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
