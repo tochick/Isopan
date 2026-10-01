@@ -5,6 +5,8 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const root = __dirname;
+const cloudEnabled = require('./supabase-connection.cjs').settings().ISOPAN_STORAGE === 'supabase';
+const cloudStore = cloudEnabled ? new (require('./supabase-store.cjs').SupabaseStore)() : null;
 const foamGreenRecipes=require('./foam-recipes.cjs').loadRecipes();
 const boxPhotoDir = path.join(root, 'Base de datos', 'Datos espuma verde', 'Fotos Box');
 const boxPhotos = [['dx','Dx.jpeg'],['dx','Dx1.jpeg'],['dx','dx2.jpeg'],['sx','sx.jpeg'],['sx','sx1.jpeg']].map(([side,file],index)=>({id:`box-${index+1}`,side,file}));
@@ -63,17 +65,29 @@ function loadDb() {
 }
 let db = loadDb();
 let committedDb = JSON.stringify(db);
-function saveDb() {
+function saveLocalCopy() {
   const temporary = `${dataFile}.tmp`;
   try {
     const serialized = JSON.stringify(db, null, 2);
     fs.writeFileSync(temporary, serialized);
     fs.renameSync(temporary, dataFile);
-    committedDb = serialized;
+    if (!cloudEnabled) committedDb = serialized;
+  } catch (caught) {
+    if (!cloudEnabled) db = JSON.parse(committedDb);
+    throw caught;
+  }
+}
+async function saveDb() {
+  if (!cloudEnabled) { saveLocalCopy(); return; }
+  try {
+    await cloudStore.save(db);
+    committedDb = JSON.stringify(db);
   } catch (caught) {
     db = JSON.parse(committedDb);
     throw caught;
   }
+  // La copia local nunca sustituye a Supabase si el servicio está caído.
+  try { saveLocalCopy(); } catch { console.error('El guardado en Supabase se confirmó, pero la copia local no pudo actualizarse.'); }
 }
 const securityHeaders = {
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
@@ -299,7 +313,7 @@ async function api(req, res, url) {
     if (db.users.length) { error(res, 409, 'La cuenta inicial ya existe.'); return; }
     if (!validCredentials(username, password)) { error(res, 400, 'Usa un usuario de 3 a 32 caracteres y una contraseña de al menos 12.'); return; }
     const user = { id: crypto.randomUUID(), username, role: 'admin', passwordHash: hashPassword(password), createdAt: new Date().toISOString() };
-    db.users.push(user); saveDb(); startSession(res, user); return;
+    db.users.push(user); await saveDb(); startSession(res, user); return;
   }
   if (pathname === '/api/login' && req.method === 'POST') {
     const ip = req.socket.remoteAddress || 'local';
@@ -331,7 +345,7 @@ async function api(req, res, url) {
     if (!verifyPassword(String(currentPassword || ''), current.user.passwordHash)) { error(res,400,'La contraseña actual no es correcta.'); return; }
     if (typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 200) { error(res,400,'La nueva contraseña debe tener al menos 12 caracteres.'); return; }
     current.user.passwordHash = hashPassword(newPassword);
-    saveDb(); revokeSessions(current.user.id);
+    await saveDb(); revokeSessions(current.user.id);
     json(res,200,{ok:true},{ 'Set-Cookie': `isopan_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureCookie?'; Secure':''}` }); return;
   }
   if (pathname === '/api/content' && req.method === 'GET') {
@@ -352,7 +366,7 @@ async function api(req, res, url) {
     if(!requireSession(req,res,true,true))return;
     const item=await readBody(req);if(!validQualityTemplate(item)){error(res,400,'Revisa las páginas y preguntas del control.');return;}
     const saved={...qualityTemplateData(item),id:crypto.randomUUID(),revision:1,updatedAt:new Date().toISOString()};
-    db.qualityTemplates.push(saved);saveDb();json(res,201,{item:saved});return;
+    db.qualityTemplates.push(saved);await saveDb();json(res,201,{item:saved});return;
   }
   const qualityTemplateMatch=pathname.match(/^\/api\/quality\/templates\/([0-9a-f-]{36})$/);
   if(qualityTemplateMatch && req.method==='PUT'){
@@ -363,7 +377,7 @@ async function api(req, res, url) {
     if(!validQualityTemplate(item)){error(res,400,'Revisa las páginas y preguntas del control.');return;}
     if(item.revision!==db.qualityTemplates[index].revision){error(res,409,'Otra persona ha actualizado el control. Vuelve a abrirlo antes de guardar.');return;}
     const saved={...qualityTemplateData(item),id:qualityTemplateMatch[1],revision:db.qualityTemplates[index].revision+1,updatedAt:new Date().toISOString()};
-    db.qualityTemplates[index]=saved;saveDb();json(res,200,{item:saved});return;
+    db.qualityTemplates[index]=saved;await saveDb();json(res,200,{item:saved});return;
   }
   if(pathname==='/api/quality/records' && req.method==='GET'){
     const current=requireSession(req,res);if(!current)return;
@@ -382,7 +396,7 @@ async function api(req, res, url) {
     const saved={id:crypto.randomUUID(),templateId:template.id,templateName:template.name,revision:template.revision,area:template.area,line:template.line,
       pages:template.pages,answers:parsed.savedAnswers,authorId:current.user.id,author:current.user.username,createdAt:new Date().toISOString()};
     const photoDir=path.join(dataDir,'quality-photos');const written=[];
-    try{if(parsed.photos.length)fs.mkdirSync(photoDir,{recursive:true});for(const photo of parsed.photos){const file=path.join(photoDir,`${photo.photoId}.jpg`);fs.writeFileSync(file,photo.bytes,{flag:'wx'});written.push(file);}db.qualityRecords.push(saved);saveDb();}
+    try{if(parsed.photos.length)fs.mkdirSync(photoDir,{recursive:true});for(const photo of parsed.photos){const file=path.join(photoDir,`${photo.photoId}.jpg`);fs.writeFileSync(file,photo.bytes,{flag:'wx'});written.push(file);}db.qualityRecords.push(saved);await saveDb();}
     catch(caught){db.qualityRecords=db.qualityRecords.filter(item=>item!==saved);for(const file of written)fs.rmSync(file,{force:true});throw caught;}
     json(res,201,{item:saved});return;
   }
@@ -401,14 +415,14 @@ async function api(req, res, url) {
     const home = await readBody(req);
     if (!validHome(home)) { error(res,400,'Revisa los textos de Inicio.'); return; }
     db.home = Object.fromEntries(Object.keys(defaultHome).map(key => [key,home[key].trim()]));
-    saveDb(); json(res,200,{home:db.home}); return;
+    await saveDb(); json(res,200,{home:db.home}); return;
   }
   if (pathname === '/api/news' && req.method === 'POST') {
     const current = requireSession(req,res,true,true); if (!current) return;
     const item = await readBody(req);
     if (!validNews(item)) { error(res,400,'Revisa el título, el texto, la categoría y la fecha.'); return; }
     const saved = {id:crypto.randomUUID(), category:item.category, title:item.title.trim(), body:item.body.trim(), eventDate:item.eventDate, author:current.user.username, createdAt:new Date().toISOString()};
-    db.news.push(saved); saveDb(); json(res,201,{item:saved}); return;
+    db.news.push(saved); await saveDb(); json(res,201,{item:saved}); return;
   }
   const newsMatch=pathname.match(/^\/api\/news\/([0-9a-f-]{36})$/);
   if (newsMatch && ['PUT','DELETE'].includes(req.method)) {
@@ -416,10 +430,10 @@ async function api(req, res, url) {
     const item=req.method==='PUT'?await readBody(req):null;
     const index=db.news.findIndex(item=>item.id===newsMatch[1]);
     if (index<0) { error(res,404,'Noticia no encontrada.'); return; }
-    if (req.method==='DELETE') { db.news.splice(index,1); saveDb(); json(res,200,{ok:true}); return; }
+    if (req.method==='DELETE') { db.news.splice(index,1); await saveDb(); json(res,200,{ok:true}); return; }
     if (!validNews(item)) { error(res,400,'Revisa el título, el texto, la categoría y la fecha.'); return; }
     const saved={...db.news[index], category:item.category, title:item.title.trim(), body:item.body.trim(), eventDate:item.eventDate, updatedAt:new Date().toISOString()};
-    db.news[index]=saved; saveDb(); json(res,200,{item:saved}); return;
+    db.news[index]=saved; await saveDb(); json(res,200,{item:saved}); return;
   }
   if (pathname==='/api/suggestions' && req.method==='GET') {
     if (!requireSession(req,res,true)) return;
@@ -430,7 +444,7 @@ async function api(req, res, url) {
     const item=await readBody(req);
     if (!validSuggestion(item)) { error(res,400,'Escribe un título y una sugerencia de al menos 10 caracteres.'); return; }
     const saved={id:crypto.randomUUID(),category:item.category,title:item.title.trim(),body:item.body.trim(),status:'Nueva',authorId:current.user.id,author:current.user.username,createdAt:new Date().toISOString()};
-    db.suggestions.push(saved); saveDb(); json(res,201,{item:saved}); return;
+    db.suggestions.push(saved); await saveDb(); json(res,201,{item:saved}); return;
   }
   const suggestionMatch=pathname.match(/^\/api\/suggestions\/([0-9a-f-]{36})$/);
   if (suggestionMatch && req.method==='PUT') {
@@ -439,7 +453,7 @@ async function api(req, res, url) {
     if (!item) { error(res,404,'Sugerencia no encontrada.'); return; }
     const {status}=await readBody(req);
     if (!suggestionStatuses.includes(status)) { error(res,400,'Estado no válido.'); return; }
-    item.status=status; item.updatedAt=new Date().toISOString(); saveDb(); json(res,200,{item}); return;
+    item.status=status; item.updatedAt=new Date().toISOString(); await saveDb(); json(res,200,{item}); return;
   }
   for (const [segment, collection, validate] of [['procedures','procedures',validProcedure],['questions','questions',validQuestion]]) {
     if (pathname === `/api/${segment}` && req.method === 'POST') {
@@ -447,7 +461,7 @@ async function api(req, res, url) {
       const entry = await readBody(req);
       if (!validate(entry)) { error(res,400,'Revisa los campos antes de guardar.'); return; }
       const saved = { ...entry, id: crypto.randomUUID(), updatedAt: new Date().toISOString() };
-      db[collection].push(saved); saveDb(); json(res,201,{item:saved}); return;
+      db[collection].push(saved); await saveDb(); json(res,201,{item:saved}); return;
     }
     const match = pathname.match(new RegExp(`^/api/${segment}/([0-9a-f-]{36})$`));
     if (match && ['PUT','DELETE'].includes(req.method)) {
@@ -455,10 +469,10 @@ async function api(req, res, url) {
       const entry=req.method==='PUT'?await readBody(req):null;
       const index = db[collection].findIndex(item => item.id === match[1]);
       if (index < 0) { error(res,404,'Contenido no encontrado.'); return; }
-      if (req.method === 'DELETE') { db[collection].splice(index,1); saveDb(); json(res,200,{ok:true}); return; }
+      if (req.method === 'DELETE') { db[collection].splice(index,1); await saveDb(); json(res,200,{ok:true}); return; }
       if (!validate(entry)) { error(res,400,'Revisa los campos antes de guardar.'); return; }
       const saved = { ...entry, id: match[1], updatedAt: new Date().toISOString() };
-      db[collection][index] = saved; saveDb(); json(res,200,{item:saved}); return;
+      db[collection][index] = saved; await saveDb(); json(res,200,{item:saved}); return;
     }
   }
   if (pathname === '/api/users' && req.method === 'GET') {
@@ -474,7 +488,7 @@ async function api(req, res, url) {
     const item=await readBody(req);
     if (!validInventory(item)) { error(res,400,'Revisa los datos del inventario.'); return; }
     const saved={...item,id:crypto.randomUUID(),updatedAt:new Date().toISOString()};
-    db.inventory.push(saved);saveDb();json(res,201,{item:saved});return;
+    db.inventory.push(saved);await saveDb();json(res,201,{item:saved});return;
   }
   const inventoryMatch=pathname.match(/^\/api\/inventory\/([0-9a-f-]{36})$/);
   if(inventoryMatch && ['PUT','DELETE'].includes(req.method)){
@@ -482,10 +496,10 @@ async function api(req, res, url) {
     const item=req.method==='PUT'?await readBody(req):null;
     const index=db.inventory.findIndex(item=>item.id===inventoryMatch[1]);
     if(index<0){error(res,404,'Artículo no encontrado.');return;}
-    if(req.method==='DELETE'){db.inventory.splice(index,1);saveDb();json(res,200,{ok:true});return;}
+    if(req.method==='DELETE'){db.inventory.splice(index,1);await saveDb();json(res,200,{ok:true});return;}
     if(!validInventory(item)){error(res,400,'Revisa los datos del inventario.');return;}
     const saved={...item,id:inventoryMatch[1],updatedAt:new Date().toISOString()};
-    db.inventory[index]=saved;saveDb();json(res,200,{item:saved});return;
+    db.inventory[index]=saved;await saveDb();json(res,200,{item:saved});return;
   }
   if(pathname==='/api/handovers' && req.method==='GET'){
     if(!requireSession(req,res,true))return;
@@ -507,7 +521,7 @@ async function api(req, res, url) {
     const item=await readBody(req);
     if(!validIssue(item)){error(res,400,'Revisa los datos de la incidencia.');return;}
     const saved={id:crypto.randomUUID(),area:item.area,priority:item.priority,title:item.title.trim(),description:item.description.trim(),assignee:item.assignee.trim(),status:'open',author:current.user.username,createdAt:new Date().toISOString(),resolvedAt:null};
-    db.issues.push(saved);saveDb();json(res,201,{item:saved});return;
+    db.issues.push(saved);await saveDb();json(res,201,{item:saved});return;
   }
   const issueMatch=pathname.match(/^\/api\/issues\/([0-9a-f-]{36})$/);
   if(issueMatch&&req.method==='PUT'){
@@ -522,7 +536,7 @@ async function api(req, res, url) {
     if(hasStatus){item.status=update.status;item.resolvedAt=update.status==='resolved'?new Date().toISOString():null;}
     if(hasForecast){item.repairDate=update.repairDate;item.materialDate=update.materialDate;item.maintenanceNote=update.maintenanceNote.trim();}
     item.updatedBy=current.user.username;item.updatedAt=new Date().toISOString();
-    saveDb();json(res,200,{item});return;
+    await saveDb();json(res,200,{item});return;
   }
   const handoverMatch=pathname.match(/^\/api\/handovers\/(\d{4}-\d{2}-\d{2})\/(1|2|3)$/);
   if(handoverMatch && req.method==='PUT'){
@@ -534,7 +548,7 @@ async function api(req, res, url) {
     const saved={date,shift,notes:Object.fromEntries(areaIds.map(id=>[id,notes[id].trim()])),author:current.user.username,updatedAt:new Date().toISOString()};
     const index=db.handovers.findIndex(item=>item.date===date&&item.shift===shift);
     if(index<0)db.handovers.push(saved);else db.handovers[index]=saved;
-    saveDb();json(res,200,{item:saved});return;
+    await saveDb();json(res,200,{item:saved});return;
   }
   if (pathname === '/api/users' && req.method === 'POST') {
     if (!requireSession(req,res,true,true)) return;
@@ -543,7 +557,7 @@ async function api(req, res, url) {
       error(res,400,'Revisa el usuario, la contraseña y el rol. El usuario debe ser único.'); return;
     }
     const user = { id: crypto.randomUUID(), username, role, passwordHash: hashPassword(password), createdAt: new Date().toISOString() };
-    db.users.push(user); saveDb(); json(res,201,{user:publicUser(user)}); return;
+    db.users.push(user); await saveDb(); json(res,201,{user:publicUser(user)}); return;
   }
   const userMatch = pathname.match(/^\/api\/users\/([0-9a-f-]{36})$/);
   if (userMatch && ['PUT','DELETE'].includes(req.method)) {
@@ -552,14 +566,14 @@ async function api(req, res, url) {
     const index = db.users.findIndex(u => u.id === userMatch[1]);
     if (index < 0) { error(res,404,'Cuenta no encontrada.'); return; }
     if (current.user.id === userMatch[1]) { error(res,400,'No puedes modificar tu propia cuenta desde aquí.'); return; }
-    if (req.method === 'DELETE') { revokeSessions(db.users[index].id); db.users.splice(index,1); saveDb(); json(res,200,{ok:true}); return; }
+    if (req.method === 'DELETE') { revokeSessions(db.users[index].id); db.users.splice(index,1); await saveDb(); json(res,200,{ok:true}); return; }
     const { role, password } = update;
     if (role !== undefined && !['admin','reader'].includes(role)) { error(res,400,'Rol no válido.'); return; }
     if (password !== undefined && (typeof password !== 'string' || password.length < 12 || password.length > 200)) { error(res,400,'La contraseña debe tener al menos 12 caracteres.'); return; }
     if (role !== undefined) db.users[index].role = role;
     if (password) db.users[index].passwordHash = hashPassword(password);
     if (role !== undefined || password) revokeSessions(db.users[index].id);
-    saveDb(); json(res,200,{user:publicUser(db.users[index])}); return;
+    await saveDb(); json(res,200,{user:publicUser(db.users[index])}); return;
   }
   error(res,404,'Ruta no encontrada.');
 }
@@ -601,6 +615,20 @@ async function sendFile(res,file,type){
   stream.on('error',()=>{if(!res.headersSent)error(res,500,'No se pudo leer el archivo.');else res.destroy();});
   res.once('close',()=>stream.destroy());
 }
+async function withCloudState(req,res,action) {
+  if (pendingCloudRequests >= 64) { error(res,503,'El servidor está ocupado. Vuelve a intentarlo.'); return; }
+  pendingCloudRequests++;
+  const previous = cloudQueue;
+  let release;
+  cloudQueue = new Promise(resolve => { release = resolve; });
+  await previous;
+  try {
+    if (req.destroyed) return;
+    db = await cloudStore.load();
+    committedDb = JSON.stringify(db);
+    await action();
+  } finally { pendingCloudRequests--; release(); }
+}
 const handler = async (req,res) => {
   try {
     let origin;
@@ -608,23 +636,45 @@ const handler = async (req,res) => {
     catch{error(res,400,'Dirección de solicitud no válida.');return;}
     if(!secureCookie&&!['127.0.0.1','localhost','localhost.'].includes(origin.hostname)){error(res,403,'El acceso local requiere localhost o 127.0.0.1.');return;}
     const url = new URL(req.url, origin);
-    if (url.pathname.startsWith('/api/')) { await api(req,res,url); return; }
+    if (url.pathname.startsWith('/api/')) {
+      if (!cloudEnabled) { await api(req,res,url); return; }
+      await withCloudState(req,res,() => api(req,res,url));
+      return;
+    }
     const entry = files.get(url.pathname);
     if (!entry || req.method !== 'GET') { error(res,404,'Archivo no encontrado.'); return; }
-    if (url.pathname.startsWith('/docs/') && !currentSession(req)) { error(res,401,'Inicia sesión para consultar el documento.'); return; }
     const [name,type] = entry;
+    if (url.pathname.startsWith('/docs/')) {
+      const serveDocument = async () => {
+        if (!currentSession(req)) { error(res,401,'Inicia sesión para consultar el documento.'); return; }
+        await sendFile(res,path.join(root,name),type);
+      };
+      if (cloudEnabled) await withCloudState(req,res,serveDocument); else await serveDocument();
+      return;
+    }
     await sendFile(res,path.join(root,name),type);
   } catch (caught) {
     if (!caught.status) console.error(caught);
     if (!res.headersSent) error(res,caught.status||500,caught.status?caught.message:'No se pudo completar la solicitud.');
   }
 };
+let cloudQueue = Promise.resolve();
+let pendingCloudRequests = 0;
 const server = tlsEnabled
   ? https.createServer({ key: fs.readFileSync(process.env.TLS_KEY), cert: fs.readFileSync(process.env.TLS_CERT) }, handler)
   : http.createServer(handler);
 server.headersTimeout = 10_000;
 server.requestTimeout = 120_000;
-server.listen(port,host,() => {
+function listen() { server.listen(port,host,() => {
   console.log(`Isopan disponible en ${tlsEnabled?'https':'http'}://${host}:${server.address().port}`);
-});
+}); }
+server.ready = (async () => {
+  if (cloudEnabled) {
+    db = await cloudStore.load();
+    committedDb = JSON.stringify(db);
+    console.log('Almacenamiento de Isopan: Supabase.');
+  }
+  listen();
+})();
+server.ready.catch(caught => { console.error(caught.status ? caught.message : 'No se pudo iniciar Isopan.'); process.exitCode = 1; });
 module.exports = server;

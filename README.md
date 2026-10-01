@@ -73,6 +73,8 @@ Antes de publicar guías o preguntas, transcribe y valida los documentos de prod
 
 ## Instalar después en el servidor de la empresa
 
+Para guardar cuentas y registros en Supabase conservando el servidor y los permisos de Isopan, consulta [la configuración de Supabase](supabase/README.md). Las claves se guardan solo en la configuración privada del servidor. Los documentos y las fotografías siguen necesitando su disco persistente.
+
 El proyecto no depende de este ordenador: copia la carpeta al servidor de la empresa e instala Node.js 18 o posterior allí. Configura un directorio persistente para los datos con `ISOPAN_DATA_DIR` y haz copias de seguridad de `store.json`. El servidor escucha solo en `127.0.0.1` por defecto. Puedes cambiar el puerto con `PORT`.
 
 Las cuentas envían contraseñas al servidor. Para acceso desde otros ordenadores o tablets, publica la aplicación mediante **HTTPS** en la red de la empresa. Hay dos opciones: mantener Node en `127.0.0.1` detrás de un proxy HTTPS corporativo y configurar `PUBLIC_HTTPS=1`; o configurar `HOST=0.0.0.0`, `TLS_KEY` y `TLS_CERT` para que Node sirva HTTPS directamente. El servidor rechaza el acceso de red directo sin TLS. Crea la cuenta administradora inicial antes de abrir el acceso a la red. El administrador de sistemas podrá asignar una dirección interna estable y configurar el inicio automático del proceso.

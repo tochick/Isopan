@@ -22,3 +22,5 @@ jobs:
         run: node server-test.cjs
       - name: Comprobar selección de recetas
         run: node recipe-test.cjs
+      - name: Comprobar integración de Supabase con datos ficticios
+        run: node supabase-test.cjs

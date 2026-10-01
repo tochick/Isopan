@@ -7,6 +7,7 @@ const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'isopan-server-test-'));
 process.env.PORT = '0';
 process.env.HOST = '127.0.0.1';
 process.env.ISOPAN_DATA_DIR = dataDir;
+process.env.ISOPAN_STORAGE = 'local';
 let server = require('./server.cjs');
 
 async function main() {
