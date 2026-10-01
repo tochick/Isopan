@@ -1,10 +1,10 @@
 # Portal interno Isopan
 
-## Demostración visual online
+## App online con cuenta
 
-La demostración de GitHub Pages permite recorrer las pantallas con datos ficticios, sin servidor ni cuentas reales. No guarda cambios. No introduzcas información interna ni contraseñas. La app de uso interno sigue funcionando mediante `node server.cjs`.
+[Abre Isopan](https://tochick.github.io/Isopan/). La publicación utiliza el servidor protegido de Supabase y comparte las cuentas, registros, recetas y fotografías de la instalación local configurada con Supabase. Al abrir o recargar solicita la cuenta; el token de acceso permanece solo en memoria. Las acciones se guardan en la base de datos y los archivos internos se descargan únicamente tras comprobar permisos.
 
-Para generar y comprobar la demostración: `node build-demo.cjs` y `node demo-test.cjs`. Se genera en `demo-dist/`, con una lista limitada de archivos públicos; no incluye cuentas, incidencias reales ni ajustes históricos de planta. El flujo de GitHub Pages publica únicamente esa carpeta.
+Para preparar la publicación: `node build-site.cjs` y `node site-test.cjs`. GitHub Pages publica únicamente `site-dist/`, sin claves, cuentas ni archivos internos. El servidor se prepara con `node build-edge.cjs`; su despliegue en Supabase requiere acceso autorizado al proyecto y los secretos privados descritos en `supabase/README.md`.
 
 Aplicación interna para Producción, aprendizaje y contenidos de empresa. Se abre desde un servidor local o de la red de la empresa. Incluye cuentas con roles **administrador** y **solo lectura**. Los permisos de edición se comprueban en el servidor.
 
@@ -32,7 +32,7 @@ El **Buzón de sugerencias** permite a cualquier cuenta enviar una idea con su u
 
 **Producción → Área → Línea → Preparar un cambio.** Perfiladora, Espuma y Cortadora tienen líneas Verde y Azul. Lana de roca y Embaladora tienen una sola. El cambio se prepara únicamente después de entrar en una línea. Las referencias del panel actual y siguiente se guardan como borrador en el navegador, separadas por cuenta.
 
-**Controles de calidad → Área → Línea.** Los controles publicados para esa línea se completan página a página. Cada página puede reunir preguntas con desplegables de dos o tres opciones, o solicitar una foto concreta. El móvil ofrece la cámara al seleccionar una foto; también se puede elegir una imagen existente. Las fotos se reducen antes de enviarse y se guardan en el directorio de datos del servidor, con acceso limitado a la persona que completó el control y a administración. Los controles realizados conservan las preguntas y la versión que se usó, aunque el administrador edite después la plantilla.
+**Controles de calidad → Área → Línea.** Los controles publicados para esa línea se completan página a página. Cada página puede reunir preguntas con desplegables de dos o tres opciones, o solicitar una foto concreta. El móvil ofrece la cámara al seleccionar una foto; también se puede elegir una imagen existente. Las fotos se reducen antes de enviarse y se guardan en el almacenamiento privado configurado, con acceso limitado a la persona que completó el control y a administración. Los controles realizados conservan las preguntas y la versión que se usó, aunque el administrador edite después la plantilla.
 
 La guía se muestra solo cuando área, línea y ambas referencias coinciden con un procedimiento aprobado. Si no hay coincidencia, la aplicación indica que la guía no está disponible y remite a la documentación vigente de planta. **No contiene pasos de operación inventados.**
 
@@ -73,7 +73,7 @@ Antes de publicar guías o preguntas, transcribe y valida los documentos de prod
 
 ## Instalar después en el servidor de la empresa
 
-Para guardar cuentas y registros en Supabase conservando el servidor y los permisos de Isopan, consulta [la configuración de Supabase](supabase/README.md). Las claves se guardan solo en la configuración privada del servidor. Los documentos y las fotografías siguen necesitando su disco persistente.
+Para guardar cuentas, registros, recetas, documentos y fotografías en Supabase conservando el servidor y los permisos de Isopan, consulta [la configuración de Supabase](supabase/README.md). Las claves se guardan solo en la configuración privada del servidor. La app pide la cuenta al abrir o recargar su página.
 
 El proyecto no depende de este ordenador: copia la carpeta al servidor de la empresa e instala Node.js 18 o posterior allí. Configura un directorio persistente para los datos con `ISOPAN_DATA_DIR` y haz copias de seguridad de `store.json`. El servidor escucha solo en `127.0.0.1` por defecto. Puedes cambiar el puerto con `PORT`.
 
@@ -94,3 +94,7 @@ node recipe-test.cjs
 La primera comprueba navegación, borradores, calidad, mantenimiento, guías, test y el escape de contenido mostrado con una interfaz simulada. La segunda arranca un servidor de prueba con datos temporales y verifica cuentas, permisos, noticias, sugerencias, inventario, relevos, calidad, límites de peticiones, cabeceras de seguridad, cambios concurrentes y conservación de datos tras reiniciar. No sustituyen una prueba visual en navegador ni una prueba de cámara en un móvil. El logotipo y el icono se obtuvieron del [sitio oficial de Isopan](https://isopan.com/) y están incluidos localmente.
 
 Las fotos DX/SX y las transcripciones de recetas permanecen en `Base de datos/`, fuera del repositorio público. Para trasladar la instalación interna, copia también `Base de datos/Datos espuma verde/Fotos Box/` y `Base de datos/Recetas/recetas.json` mediante un canal interno. El servidor lee las recetas al arrancar.
+
+## Móvil, tablet y ordenador
+
+La interfaz adapta el menú y los formularios al ancho disponible, ofrece controles táctiles de al menos 44 píxeles y respeta la reducción de movimiento. Las recetas conservan su fila completa y ofrecen «Ver datos en grande» para consultarlas por campos. Los ejemplos de nuevos controles son indicaciones que desaparecen al escribir; al entrar en un texto existente se selecciona para sustituirlo directamente sin borrar datos al salir del campo.

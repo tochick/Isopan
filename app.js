@@ -32,6 +32,36 @@ const ICONS = {
 const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = document.getElementById('app');
+const privateAssets = new Map();
+function publicApiBase(){return window.ISOPAN_API_BASE || '';}
+function privateMediaAttributes(url, attribute='src'){
+  return publicApiBase()?`data-private-${attribute}="${escapeHtml(url)}"`:`${attribute}="${escapeHtml(url)}"`;
+}
+async function privateAssetUrl(url){
+  if(!publicApiBase())return url;
+  const user=state.auth.user?.id, token=state.auth.sessionToken;
+  if(!user||!token)throw new Error('Inicia sesión para abrir el archivo.');
+  if(!privateAssets.has(url))privateAssets.set(url,(async()=>{
+    const r=await fetch(publicApiBase()+url,{headers:{Authorization:'Bearer '+token},credentials:'omit'});
+    if(!r.ok)throw new Error('No se pudo abrir el archivo.');const blob=await r.blob();
+    if(state.auth.user?.id!==user||state.auth.sessionToken!==token)throw new Error('La sesión ha cambiado.');
+    return URL.createObjectURL(blob);
+  })().catch(error=>{privateAssets.delete(url);throw error;}));
+  return privateAssets.get(url);
+}
+function preparePrivateAssets(){
+  if(!publicApiBase()||!document.querySelectorAll)return;
+  for(const image of document.querySelectorAll('img[data-private-src]')){
+    const source=image.dataset.privateSrc;
+    privateAssetUrl(source).then(url=>{if(image.isConnected)image.src=url;}).catch(()=>{if(image.isConnected)image.alt='No se pudo cargar la imagen. Vuelve a abrir esta sección.';});
+  }
+  for(const link of document.querySelectorAll('a[href^="/docs/"]')){
+    link.dataset.privateHref=link.getAttribute('href');link.removeAttribute('href');link.setAttribute('role','link');link.tabIndex=0;
+  }
+  for(const link of document.querySelectorAll('a[data-private-href]')){
+    privateAssetUrl(link.dataset.privateHref).then(url=>{if(link.isConnected)link.href=url;}).catch(()=>{});
+  }
+}
 function savedTheme(){try{return localStorage.getItem('isopan-theme')==='dark'?'dark':'light';}catch{return 'light';}}
 function setTheme(theme){document.documentElement.dataset.theme=theme;try{localStorage.setItem('isopan-theme',theme);}catch{}}
 setTheme(savedTheme());
@@ -43,6 +73,9 @@ state.office={inventory:[],handovers:[],issues:[],month:todayKey.slice(0,7),date
 function learningKey() { return `isopan-learning-${state.auth.user?.id || 'sin-cuenta'}`; }
 function readCompleted() { try { const value=JSON.parse(localStorage.getItem(learningKey()) || '[]'); return Array.isArray(value)?value:[]; } catch { return []; } }
 function resetPersonalState() {
+  if(!state.auth.user)state.auth.sessionToken=null;
+  for(const pending of privateAssets.values())Promise.resolve(pending).then(url=>URL.revokeObjectURL(url)).catch(()=>{});
+  privateAssets.clear();
   state.completed=state.auth.user?readCompleted():[];state.lesson=0;state.learningArea=null;
   state.quiz={area:'all',items:[],index:0,answers:[],chosen:null,checked:false,phase:'setup'};
   Object.assign(state.office,{inventory:[],handovers:[],issues:[],incoming:null,message:'',drafts:{},maintenanceDrafts:{},issueDraft:null});
@@ -196,9 +229,9 @@ function handoverPage() {
 async function apiRequest(url, method='GET', body) {
   const actingUser=state.auth.user?.id;
   const sessionBound=!['/api/login','/api/setup','/api/bootstrap'].includes(url);
-  const response = await fetch(url, {
-    method, credentials: 'same-origin',
-    headers: method==='GET'?{}:{ 'Content-Type': 'application/json', 'X-CSRF-Token': state.auth.csrf || '' },
+  const response = await fetch(publicApiBase()+url, {
+    method, credentials: publicApiBase()?'omit':'same-origin',
+    headers: { ...(state.auth.sessionToken?{Authorization:'Bearer '+state.auth.sessionToken}:{}),...(method==='GET'?{}:{ 'Content-Type': 'application/json', 'X-CSRF-Token': state.auth.csrf || '' }) },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const result = await response.json().catch(() => ({}));
@@ -243,6 +276,11 @@ async function initialize() {
     const bootstrap = await apiRequest('/api/bootstrap');
     state.auth = { loading:false, setupRequired:bootstrap.setupRequired, user:bootstrap.user, csrf:bootstrap.csrf, error:'' };
     resetPersonalState();
+    if (!window.ISOPAN_DEMO_API) {
+      if (bootstrap.user) await apiRequest('/api/logout','POST',{});
+      state.auth.user=null; state.auth.csrf=null;
+      render(); return;
+    }
     if (bootstrap.user) { await loadContent(); await loadQualityData(); if (bootstrap.user.role==='admin') { await loadUsers(); await loadOfficeData(); } }
   } catch {
     state.auth = { loading:false, setupRequired:false, user:null, csrf:null, error:'No se puede conectar con el servidor de Isopan. Abre la aplicación desde la dirección del servidor, no desde el archivo index.html.' };
@@ -364,9 +402,20 @@ function render() {
   else if(parts[0]==='admin' && state.auth.user.role==='admin'){view=adminPage();crumbs='Administración';active='admin';}
   else {view=home();crumbs='Inicio';active='inicio';}
   app.innerHTML=shell(view,crumbs,active); state.route=parts.join('/');
+  preparePrivateAssets();
 }
 
+document.addEventListener('focusin',event=>{
+  const field=event.target;
+  if(field.matches?.('textarea,input:not([type]),input[type="text"],input[type="email"],input[type="search"],input[type="url"],input[type="tel"]')&&field.value&&!field.readOnly)field.select();
+});
 document.addEventListener('click',async event=>{
+  const privateLink=event.target.closest?.('a[data-private-href]');
+  if(privateLink&&!privateLink.getAttribute('href')){
+    event.preventDefault();const opened=window.open('about:blank','_blank');
+    if(opened)opened.opener=null;
+    try{const url=await privateAssetUrl(privateLink.dataset.privateHref);if(opened)opened.location.href=url;else{privateLink.href=url;privateLink.click();}}catch{opened?.close();state.globalMessage='No se pudo abrir el archivo. Vuelve a intentarlo.';render();}return;
+  }
   const themeButton=event.target.closest('[data-theme-toggle]');if(themeButton){setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');themeButton.setAttribute('aria-checked',String(document.documentElement.dataset.theme==='dark'));return;}
   if (qualityClick(event)) return;
   if (foamGreenClick(event)) return;
@@ -460,7 +509,7 @@ document.addEventListener('submit',async event=>{
     if(form.id==='setup-form' && password!==form.querySelector('[name="confirm"]').value){state.auth.error='Las contraseñas no coinciden.';render();return;}
     try {
       const result=await apiRequest(form.id==='setup-form'?'/api/setup':'/api/login','POST',{username,password});
-      state.auth={loading:false,setupRequired:false,user:result.user,csrf:result.csrf,error:''};
+      state.auth={loading:false,setupRequired:false,user:result.user,csrf:result.csrf,sessionToken:result.sessionToken||null,error:''};
       resetPersonalState();
       await loadContent();await loadQualityData(); if(result.user.role==='admin'){await loadUsers();await loadOfficeData();} navigate('inicio'); render();
     } catch(caught) { state.auth.user=null;state.auth.csrf=null;resetPersonalState();state.auth.error=caught.message;render(); }

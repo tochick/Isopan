@@ -1,3 +1,4 @@
+const runtimeEnv = require('./runtime-env.cjs');
 const http = require('node:http');
 const https = require('node:https');
 const fs = require('node:fs');
@@ -5,22 +6,23 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const root = __dirname;
+const edgeMode = runtimeEnv.ISOPAN_EDGE === '1';
 const cloudEnabled = require('./supabase-connection.cjs').settings().ISOPAN_STORAGE === 'supabase';
 const cloudStore = cloudEnabled ? new (require('./supabase-store.cjs').SupabaseStore)() : null;
-const foamGreenRecipes=require('./foam-recipes.cjs').loadRecipes();
+const foamGreenRecipes=edgeMode?[]:require('./foam-recipes.cjs').loadRecipes();
 const boxPhotoDir = path.join(root, 'Base de datos', 'Datos espuma verde', 'Fotos Box');
 const boxPhotos = [['dx','Dx.jpeg'],['dx','Dx1.jpeg'],['dx','dx2.jpeg'],['sx','sx.jpeg'],['sx','sx1.jpeg']].map(([side,file],index)=>({id:`box-${index+1}`,side,file}));
-const foamGreenReadings = JSON.parse(fs.readFileSync(path.join(root, 'foam-green-readings.json'), 'utf8'));
-const foamGreenCatalog = JSON.parse(fs.readFileSync(path.join(root, 'foam-green-catalog.json'), 'utf8')).map(item => {
+const foamGreenReadings = edgeMode?{}:JSON.parse(fs.readFileSync(path.join(root, 'foam-green-readings.json'), 'utf8'));
+const foamGreenCatalog = (edgeMode?[]:JSON.parse(fs.readFileSync(path.join(root, 'foam-green-catalog.json'), 'utf8'))).map(item => {
   const reading = foamGreenReadings[item.id];
   return reading ? { ...item, settings: { sx: reading.sx, dx: reading.dx }, review: reading.review || 'Datos transcritos de una ficha histórica; confirmar con el responsable antes de utilizarlos.' } : item;
 });
-const dataDir = path.resolve(process.env.ISOPAN_DATA_DIR || path.join(root, 'data'));
+const dataDir = path.resolve(runtimeEnv.ISOPAN_DATA_DIR || path.join(root, 'data'));
 const dataFile = path.join(dataDir, 'store.json');
-const port = Number(process.env.PORT || 4173);
-const host = process.env.HOST || '127.0.0.1';
-const tlsEnabled = Boolean(process.env.TLS_KEY && process.env.TLS_CERT);
-const secureCookie = tlsEnabled || process.env.PUBLIC_HTTPS === '1';
+const port = Number(runtimeEnv.PORT || 4173);
+const host = runtimeEnv.HOST || '127.0.0.1';
+const tlsEnabled = Boolean(runtimeEnv.TLS_KEY && runtimeEnv.TLS_CERT);
+const secureCookie = tlsEnabled || runtimeEnv.PUBLIC_HTTPS === '1';
 if (!['127.0.0.1','localhost'].includes(host) && !tlsEnabled) {
   throw new Error('El acceso de red requiere TLS_KEY y TLS_CERT. Para un proxy HTTPS, deja HOST en 127.0.0.1.');
 }
@@ -39,6 +41,7 @@ const defaultHome = {
 };
 
 function loadDb() {
+  if (edgeMode) return { users:[],home:defaultHome,procedures:[],questions:[],inventory:[],handovers:[],issues:[],news:[],suggestions:[],qualityTemplates:[],qualityRecords:[] };
   fs.mkdirSync(dataDir, { recursive: true });
   if (!fs.existsSync(dataFile)) {
     const initial = { users: [], home: defaultHome, procedures: [], questions: [], inventory: [], handovers: [], issues: [], news: [], suggestions: [], qualityTemplates: [], qualityRecords: [] };
@@ -60,12 +63,14 @@ function loadDb() {
     news: Array.isArray(saved.news) ? saved.news : [],
     suggestions: Array.isArray(saved.suggestions) ? saved.suggestions : [],
     qualityTemplates: Array.isArray(saved.qualityTemplates) ? saved.qualityTemplates : [],
-    qualityRecords: Array.isArray(saved.qualityRecords) ? saved.qualityRecords : []
+    qualityRecords: Array.isArray(saved.qualityRecords) ? saved.qualityRecords : [],
+    ...(saved.plantContent ? { plantContent: saved.plantContent } : {})
   };
 }
 let db = loadDb();
 let committedDb = JSON.stringify(db);
 function saveLocalCopy() {
+  if (edgeMode) return;
   const temporary = `${dataFile}.tmp`;
   try {
     const serialized = JSON.stringify(db, null, 2);
@@ -143,6 +148,7 @@ function verifyPassword(password, stored) {
   } catch { return false; }
 }
 function cookieToken(req) {
+  if (edgeMode) return (req.headers.authorization || '').match(/^Bearer ([a-f0-9]{64})$/)?.[1] || '';
   const match = (req.headers.cookie || '').match(/(?:^|;\s*)isopan_session=([^;]+)/);
   return match?.[1] || '';
 }
@@ -150,7 +156,7 @@ function currentSession(req) {
   const token = cookieToken(req);
   if (!token) return null;
   const key = crypto.createHash('sha256').update(token).digest('hex');
-  const session = sessions.get(key);
+  const session = edgeMode ? (db.loginSessions || []).find(item => item.key === key) : sessions.get(key);
   if (!session) return null;
   if (session.expires < Date.now()) { sessions.delete(key); return null; }
   const user = db.users.find(u => u.id === session.userId);
@@ -158,14 +164,20 @@ function currentSession(req) {
 }
 function revokeSessions(userId) {
   for (const [key, session] of sessions) if (session.userId === userId) sessions.delete(key);
+  if (db.loginSessions) db.loginSessions=db.loginSessions.filter(session=>session.userId!==userId);
 }
 function publicUser(user) { return { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt }; }
-function startSession(res, user) {
+async function startSession(res, user) {
   const token = crypto.randomBytes(32).toString('hex');
   const csrf = crypto.randomBytes(24).toString('hex');
-  sessions.set(crypto.createHash('sha256').update(token).digest('hex'), { userId: user.id, csrf, expires: Date.now() + sessionLife });
-  const cookie = `isopan_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${Math.floor(sessionLife/1000)}${secureCookie?'; Secure':''}`;
-  json(res, 200, { user: publicUser(user), csrf }, { 'Set-Cookie': cookie });
+  const key=crypto.createHash('sha256').update(token).digest('hex');
+  const session={ userId:user.id,csrf,expires:Date.now()+sessionLife };
+  if (edgeMode) {
+    db.loginSessions=(db.loginSessions||[]).filter(item=>item.expires>Date.now()).slice(-4999);
+    db.loginSessions.push({key,...session});await saveDb();
+  } else sessions.set(key,session);
+  const cookie = `isopan_session=${token}; HttpOnly; SameSite=Strict; Path=/${secureCookie?'; Secure':''}`;
+  json(res, 200, { user: publicUser(user), csrf, ...(edgeMode?{sessionToken:token}:{}) }, edgeMode?{}:{ 'Set-Cookie': cookie });
 }
 function requireSession(req, res, admin = false, mutation = false) {
   const current = currentSession(req);
@@ -283,18 +295,19 @@ function parseQualityRecord(template, answers) {
 }
 function contentFor(user) {
   const admin = user.role === 'admin';
+  const plant = cloudEnabled ? db.plantContent : null;
   return { home: db.home, news: [...db.news].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),
     mySuggestions: [...db.suggestions].filter(item=>item.authorId===user.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),
-    foamGreenCatalog: [...foamGreenCatalog.map(({file, ...item}) => item),...foamGreenRecipes.flatMap(recipe=>recipe.rows.filter(row=>!foamGreenCatalog.some(item=>item.family===recipe.family&&item.width===recipe.width&&item.thickness===row.thickness)).map(row=>({id:`recipe-${recipe.family}-${recipe.width}-${row.thickness}`,family:recipe.family,width:recipe.width,thickness:row.thickness,note:'Variante identificada en las tablas de recetas; ajustes de tapones pendientes.'})))].filter((item,index,list)=>list.findIndex(other=>other.id===item.id)===index),
-    foamGreenBoxPhotos: boxPhotos.filter(item=>fs.existsSync(path.join(boxPhotoDir,item.file))).map(({id,side})=>({id,side,url:`/api/foam-green/box-photos/${id}`})),
-    foamGreenRecipes,
+    foamGreenCatalog: plant?.foamGreenCatalog || [...foamGreenCatalog.map(({file, ...item}) => item),...foamGreenRecipes.flatMap(recipe=>recipe.rows.filter(row=>!foamGreenCatalog.some(item=>item.family===recipe.family&&item.width===recipe.width&&item.thickness===row.thickness)).map(row=>({id:`recipe-${recipe.family}-${recipe.width}-${row.thickness}`,family:recipe.family,width:recipe.width,thickness:row.thickness,note:'Variante identificada en las tablas de recetas; ajustes de tapones pendientes.'})))].filter((item,index,list)=>list.findIndex(other=>other.id===item.id)===index),
+    foamGreenBoxPhotos: plant?.boxPhotos ? plant.boxPhotos.map(({id,side})=>({id,side,url:`/api/foam-green/box-photos/${id}`})) : boxPhotos.filter(item=>fs.existsSync(path.join(boxPhotoDir,item.file))).map(({id,side})=>({id,side,url:`/api/foam-green/box-photos/${id}`})),
+    foamGreenRecipes: plant?.foamGreenRecipes || foamGreenRecipes,
     procedures: admin ? db.procedures : db.procedures.filter(p => p.status === 'approved'),
     questions: admin ? db.questions : db.questions.filter(q => q.status === 'approved') };
 }
 function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
-  try { const source=new URL(origin);return source.host===String(req.headers.host).toLowerCase()&&source.protocol===(secureCookie?'https:':'http:'); } catch { return false; }
+  try { const source=new URL(origin);if(edgeMode)return source.origin===runtimeEnv.ISOPAN_ALLOWED_ORIGIN;return source.host===String(req.headers.host).toLowerCase()&&source.protocol===(secureCookie?'https:':'http:'); } catch { return false; }
 }
 
 async function api(req, res, url) {
@@ -313,12 +326,13 @@ async function api(req, res, url) {
     if (db.users.length) { error(res, 409, 'La cuenta inicial ya existe.'); return; }
     if (!validCredentials(username, password)) { error(res, 400, 'Usa un usuario de 3 a 32 caracteres y una contraseña de al menos 12.'); return; }
     const user = { id: crypto.randomUUID(), username, role: 'admin', passwordHash: hashPassword(password), createdAt: new Date().toISOString() };
-    db.users.push(user); await saveDb(); startSession(res, user); return;
+    db.users.push(user); await saveDb(); await startSession(res, user); return;
   }
   if (pathname === '/api/login' && req.method === 'POST') {
     const ip = req.socket.remoteAddress || 'local';
     const { username, password } = await readBody(req);
     if (typeof username !== 'string' || username.length > 32 || typeof password !== 'string' || password.length > 200) { error(res,401,'Usuario o contraseña incorrectos.'); return; }
+    if (edgeMode && !(await cloudStore.loginAllowed(crypto.createHash('sha256').update(username.toLowerCase()).digest('hex')))) { error(res,429,'Demasiados intentos. Vuelve a probar en unos minutos.'); return; }
     const loginKey = `${ip}:${username.toLowerCase()}`;
     const ipKey = `ip:${ip}`;
     const prior = failedLogins.get(loginKey);
@@ -332,11 +346,14 @@ async function api(req, res, url) {
       failedLogins.set(ipKey,{count:ipAttempts.count+1,until:Date.now()+5*60*1000});
       error(res, 401, 'Usuario o contraseña incorrectos.'); return;
     }
-    failedLogins.delete(loginKey); failedLogins.delete(ipKey); startSession(res, user); return;
+    failedLogins.delete(loginKey); failedLogins.delete(ipKey);
+    if(edgeMode)await cloudStore.clearLoginAttempts(crypto.createHash('sha256').update(username.toLowerCase()).digest('hex'));
+    await startSession(res, user); return;
   }
   if (pathname === '/api/logout' && req.method === 'POST') {
     const current = requireSession(req, res, false, true); if (!current) return;
-    sessions.delete(crypto.createHash('sha256').update(current.token).digest('hex'));
+    const key=crypto.createHash('sha256').update(current.token).digest('hex');sessions.delete(key);
+    if(edgeMode){db.loginSessions=(db.loginSessions||[]).filter(item=>item.key!==key);await saveDb();}
     json(res, 200, { ok: true }, { 'Set-Cookie': `isopan_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureCookie?'; Secure':''}` }); return;
   }
   if (pathname === '/api/account/password' && req.method === 'POST') {
@@ -345,7 +362,7 @@ async function api(req, res, url) {
     if (!verifyPassword(String(currentPassword || ''), current.user.passwordHash)) { error(res,400,'La contraseña actual no es correcta.'); return; }
     if (typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 200) { error(res,400,'La nueva contraseña debe tener al menos 12 caracteres.'); return; }
     current.user.passwordHash = hashPassword(newPassword);
-    await saveDb(); revokeSessions(current.user.id);
+    revokeSessions(current.user.id); await saveDb();
     json(res,200,{ok:true},{ 'Set-Cookie': `isopan_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureCookie?'; Secure':''}` }); return;
   }
   if (pathname === '/api/content' && req.method === 'GET') {
@@ -354,6 +371,11 @@ async function api(req, res, url) {
   }
   if (pathname.startsWith('/api/foam-green/box-photos/') && req.method === 'GET') {
     if (!requireSession(req,res)) return;
+    if (cloudEnabled && db.plantContent?.boxPhotos) {
+      const photo = db.plantContent.boxPhotos.find(item => pathname === `/api/foam-green/box-photos/${item.id}`);
+      if (!photo) { error(res,404,'Fotografía no encontrada.'); return; }
+      await sendCloudFile(res,photo.object,'image/jpeg'); return;
+    }
     const photo=boxPhotos.find(item=>pathname===`/api/foam-green/box-photos/${item.id}`);
     if(!photo){error(res,404,'Fotografía no encontrada.');return;}
     await sendFile(res,path.join(boxPhotoDir,photo.file),'image/jpeg');return;
@@ -396,7 +418,10 @@ async function api(req, res, url) {
     const saved={id:crypto.randomUUID(),templateId:template.id,templateName:template.name,revision:template.revision,area:template.area,line:template.line,
       pages:template.pages,answers:parsed.savedAnswers,authorId:current.user.id,author:current.user.username,createdAt:new Date().toISOString()};
     const photoDir=path.join(dataDir,'quality-photos');const written=[];
-    try{if(parsed.photos.length)fs.mkdirSync(photoDir,{recursive:true});for(const photo of parsed.photos){const file=path.join(photoDir,`${photo.photoId}.jpg`);fs.writeFileSync(file,photo.bytes,{flag:'wx'});written.push(file);}db.qualityRecords.push(saved);await saveDb();}
+    try{if(parsed.photos.length&&!edgeMode)fs.mkdirSync(photoDir,{recursive:true});for(const photo of parsed.photos){
+      if (cloudEnabled) await cloudStore.uploadFile(`quality/${photo.photoId}.jpg`,photo.bytes,'image/jpeg');
+      if(!edgeMode){const file=path.join(photoDir,`${photo.photoId}.jpg`);fs.writeFileSync(file,photo.bytes,{flag:'wx'});written.push(file);}
+    }db.qualityRecords.push(saved);await saveDb();}
     catch(caught){db.qualityRecords=db.qualityRecords.filter(item=>item!==saved);for(const file of written)fs.rmSync(file,{force:true});throw caught;}
     json(res,201,{item:saved});return;
   }
@@ -406,6 +431,7 @@ async function api(req, res, url) {
     const record=db.qualityRecords.find(item=>item.answers.some(answer=>answer.photoId===qualityPhotoMatch[1])&&
       (current.user.role==='admin'||item.authorId===current.user.id));
     if(!record){error(res,404,'Foto no encontrada.');return;}
+    if (cloudEnabled) { await sendCloudFile(res,`quality/${qualityPhotoMatch[1]}.jpg`,'image/jpeg'); return; }
     const file=path.join(dataDir,'quality-photos',`${qualityPhotoMatch[1]}.jpg`);
     if(!fs.existsSync(file)){error(res,404,'Foto no disponible.');return;}
     await sendFile(res,file,'image/jpeg');return;
@@ -583,6 +609,7 @@ const files = new Map([
   ['/index.html', ['index.html','text/html; charset=utf-8']],
   ['/styles.css', ['styles.css','text/css; charset=utf-8']],
   ['/app.js', ['app.js','text/javascript; charset=utf-8']],
+  ['/site-config.js',['site-config.js','text/javascript; charset=utf-8']],
   ['/foam-green.js', ['foam-green.js','text/javascript; charset=utf-8']],
   ['/quality.js', ['quality.js','text/javascript; charset=utf-8']],
   ['/learning-content.js', ['learning-content.js','text/javascript; charset=utf-8']],
@@ -614,6 +641,12 @@ async function sendFile(res,file,type){
   });
   stream.on('error',()=>{if(!res.headersSent)error(res,500,'No se pudo leer el archivo.');else res.destroy();});
   res.once('close',()=>stream.destroy());
+}
+async function sendCloudFile(res,object,type) {
+  const bytes = await cloudStore.downloadFile(object);
+  if (res.destroyed) return;
+  res.writeHead(200,{...securityHeaders,'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+  res.end(bytes);
 }
 async function withCloudState(req,res,action) {
   if (pendingCloudRequests >= 64) { error(res,503,'El servidor está ocupado. Vuelve a intentarlo.'); return; }
@@ -647,6 +680,8 @@ const handler = async (req,res) => {
     if (url.pathname.startsWith('/docs/')) {
       const serveDocument = async () => {
         if (!currentSession(req)) { error(res,401,'Inicia sesión para consultar el documento.'); return; }
+        const object = cloudEnabled && db.plantContent?.documents?.[name];
+        if (object) { await sendCloudFile(res,object,type); return; }
         await sendFile(res,path.join(root,name),type);
       };
       if (cloudEnabled) await withCloudState(req,res,serveDocument); else await serveDocument();
@@ -660,8 +695,8 @@ const handler = async (req,res) => {
 };
 let cloudQueue = Promise.resolve();
 let pendingCloudRequests = 0;
-const server = tlsEnabled
-  ? https.createServer({ key: fs.readFileSync(process.env.TLS_KEY), cert: fs.readFileSync(process.env.TLS_CERT) }, handler)
+const server = edgeMode ? {} : tlsEnabled
+  ? https.createServer({ key: fs.readFileSync(runtimeEnv.TLS_KEY), cert: fs.readFileSync(runtimeEnv.TLS_CERT) }, handler)
   : http.createServer(handler);
 server.headersTimeout = 10_000;
 server.requestTimeout = 120_000;
@@ -674,7 +709,8 @@ server.ready = (async () => {
     committedDb = JSON.stringify(db);
     console.log('Almacenamiento de Isopan: Supabase.');
   }
-  listen();
+  if(!edgeMode)listen();
 })();
 server.ready.catch(caught => { console.error(caught.status ? caught.message : 'No se pudo iniciar Isopan.'); process.exitCode = 1; });
-module.exports = server;
+module.exports = edgeMode ? {handler,ready:server.ready} : server;
+

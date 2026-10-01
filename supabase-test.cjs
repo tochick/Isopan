@@ -13,10 +13,22 @@ process.env.ISOPAN_DATA_DIR = temporary;
 process.env.PORT = '0';
 process.env.HOST = '127.0.0.1';
 let saved, revision = 0, failSave = false, conflict = false;
+let failUpload = false;
+const fakeJpeg = Buffer.concat([Buffer.from([0xff,0xd8,0xff]),Buffer.alloc(115),Buffer.from([0xff,0xd9])]);
+const objects = new Map([['references/box.jpeg',fakeJpeg],['documents/training.pdf',Buffer.from('Documento ficticio')]]);
 global.fetch = async (url, options = {}) => {
   if (!String(url).startsWith(process.env.SUPABASE_URL)) return nativeFetch(url, options);
   assert.equal(options.headers.apikey, 'sb_secret_fixture');
+  if (String(url).includes('/storage/v1/object/')) {
+    const object = String(url).split('isopan-private/')[1];
+    if (options.method === 'POST') {
+      if (failUpload) return new Response('{}',{status:503});
+      objects.set(object,Buffer.from(options.body)); return new Response('{}',{status:200});
+    }
+    return objects.has(object) ? new Response(objects.get(object),{status:200}) : new Response('{}',{status:404});
+  }
   if (!saved) saved = JSON.parse(fs.readFileSync(path.join(temporary, 'store.json')));
+  if (!saved.plantContent) saved.plantContent = { foamGreenCatalog:[],foamGreenRecipes:[],boxPhotos:[{id:'box-1',side:'dx',object:'references/box.jpeg'}],documents:{'docs/ruido-insst.pdf':'documents/training.pdf'} };
   if (options.method === 'PATCH') {
     if (failSave) throw new Error('Fallo simulado con una clave secreta que no debe aparecer.');
     if (conflict) return new Response('[]', { status: 200 });
@@ -43,6 +55,7 @@ async function main() {
   assert.equal(setup.status, 200);
   const admin = { cookie: setup.cookie, csrf: setup.body.csrf };
   assert.equal(saved.users.length, 1);
+  assert(!setup.cookie.includes('Max-Age'),'La cookie de acceso no debe persistir después de cerrar el navegador');
   assert(!JSON.stringify(saved).includes('clave-ficticia-de-pruebas'));
   assert.equal((await request('/api/users', 'POST', { username: 'cloud-reader', password: 'otra-clave-ficticia-larga', role: 'reader' }, admin)).status, 201);
   const login = await request('/api/login', 'POST', { username: 'cloud-reader', password: 'otra-clave-ficticia-larga' });
@@ -53,6 +66,23 @@ async function main() {
   const text = (await request('/api/content', 'GET', undefined, reader));
   assert.equal(text.status, 200);
   assert(!JSON.stringify(text.body).includes('sb_secret'));
+  const box = await nativeFetch(base+'/api/foam-green/box-photos/box-1',{headers:{Cookie:reader.cookie}});
+  assert.deepEqual(Buffer.from(await box.arrayBuffer()),fakeJpeg,'La foto Box se obtiene de Supabase, sin depender de las fotos locales');
+  assert.equal((await nativeFetch(base+'/api/foam-green/box-photos/box-1')).status,401);
+  const template = await request('/api/quality/templates','POST',{name:'Control con imagen',area:'espuma',line:'Verde',status:'published',pages:[{type:'photo',title:'Pantalla de control',prompt:'Foto de la pantalla de prueba',required:true}]},admin);
+  assert.equal(template.status,201);
+  const entry = {templateId:template.body.item.id,revision:1,answers:[{photoData:'data:image/jpeg;base64,'+fakeJpeg.toString('base64')}]};
+  failUpload=true;
+  assert.equal((await request('/api/quality/records','POST',entry,reader)).status,503);
+  assert.equal(saved.qualityRecords.length,0,'Un fallo al subir la foto impide guardar un control incompleto');
+  failUpload=false;
+  const record = await request('/api/quality/records','POST',entry,reader);
+  assert.equal(record.status,201);
+  const photoId=record.body.item.answers[0].photoId;
+  fs.unlinkSync(path.join(temporary,'quality-photos',photoId+'.jpg'));
+  const photo=await nativeFetch(base+'/api/quality/photos/'+photoId,{headers:{Cookie:reader.cookie}});
+  assert.equal(photo.status,200);
+  assert.deepEqual(Buffer.from(await photo.arrayBuffer()),fakeJpeg,'La foto del control permanece disponible sin la copia local');
   failSave = true;
   const failed = await request('/api/news', 'POST', { title: 'No guardar', body: 'Texto de prueba', category: 'General', eventDate: '2026-10-01' }, admin);
   assert.equal(failed.status, 503);

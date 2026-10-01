@@ -1,4 +1,4 @@
-name: Publicar demostración visual
+name: Publicar app Isopan
 on:
   push:
     branches: [main]
@@ -11,7 +11,7 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
-  demo:
+  app:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -21,11 +21,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node build-demo.cjs
-      - run: node demo-test.cjs
+      - run: node build-site.cjs
+      - run: node site-test.cjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: demo-dist
+          path: site-dist
       - uses: actions/deploy-pages@v4
         id: deployment

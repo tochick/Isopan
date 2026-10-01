@@ -24,3 +24,7 @@ jobs:
         run: node recipe-test.cjs
       - name: Comprobar integración de Supabase con datos ficticios
         run: node supabase-test.cjs
+      - name: Comprobar servidor publicado y sesiones
+        run: node edge-test.cjs
+      - name: Comprobar archivos de publicación
+        run: node site-test.cjs

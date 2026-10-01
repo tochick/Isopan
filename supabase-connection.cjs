@@ -1,10 +1,11 @@
+const runtimeEnv = require('./runtime-env.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 
 function settings() {
   const file = path.join(__dirname, '.env.supabase');
   const values = {};
-  if (fs.existsSync(file)) {
+  if (runtimeEnv.ISOPAN_EDGE !== '1' && fs.existsSync(file)) {
     for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
       const match = line.match(/^\s*(SUPABASE_URL|SUPABASE_SECRET_KEY|ISOPAN_STORAGE)\s*=\s*(.*?)\s*$/);
       if (!match) continue;
@@ -13,7 +14,7 @@ function settings() {
       values[match[1]] = value;
     }
   }
-  return { ...values, ...Object.fromEntries(['SUPABASE_URL','SUPABASE_SECRET_KEY','ISOPAN_STORAGE'].filter(name => process.env[name] !== undefined).map(name => [name,process.env[name]])) };
+  return { ...values, ...Object.fromEntries(['SUPABASE_URL','SUPABASE_SECRET_KEY','ISOPAN_STORAGE'].filter(name => runtimeEnv[name] !== undefined).map(name => [name,runtimeEnv[name]])) };
 }
 
 function configuration() {
@@ -56,3 +57,4 @@ if (require.main === module) checkConnection().then(() => {
 });
 
 module.exports = { configuration, checkConnection, settings };
+

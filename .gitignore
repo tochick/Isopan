@@ -6,8 +6,11 @@ data/
 /Base de datos/
 /.skill-build/
 /node_modules/
+/.pnpm-store/
 /coverage/
 /demo-dist/
+/site-dist/
+/.edge-dist/
 *.log
 
 # Credenciales y configuración privada del servidor

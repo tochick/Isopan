@@ -4,6 +4,7 @@ const vm = require('node:vm');
 
 const storage = new Map();
 const listeners = {};
+const requests = [];
 const app = { innerHTML: '' };
 const context = {
   document: {
@@ -17,11 +18,11 @@ const context = {
     getItem(key) { return storage.get(key) ?? null; },
     setItem(key, value) { storage.set(key, value); }
   },
-  fetch: async (url) => ({ ok: true, json: async () => url === '/api/bootstrap'
+  fetch: async (url) => { requests.push(url); return ({ ok: true, json: async () => url === '/api/bootstrap'
     ? { setupRequired: false, user: { id: 'admin', username: 'prueba', role: 'admin' }, csrf: 'prueba' }
     : url === '/api/content' ? { home: {}, procedures: [], questions: [], foamGreenCatalog: JSON.parse(fs.readFileSync('foam-green-catalog.json','utf8')).map(item=>{const reading=JSON.parse(fs.readFileSync('foam-green-readings.json','utf8'))[item.id];return reading?{...item,settings:{sx:reading.sx,dx:reading.dx},review:reading.review}:item;}) }
     : url === '/api/inventory' || url === '/api/issues' || url === '/api/quality/templates' || url === '/api/quality/records' || url.startsWith('/api/handovers?month=') ? { items: [] }
-    : url.startsWith('/api/handovers?date=') ? { item: null } : { users: [] } }),
+    : url.startsWith('/api/handovers?date=') ? { item: null } : { users: [] } }); },
   Intl,
   Date
 };
@@ -35,6 +36,10 @@ vm.runInContext(fs.readFileSync('app.js', 'utf8'), context);
 
 async function main() {
 await new Promise(resolve => setImmediate(resolve));
+assert.match(app.innerHTML,/Iniciar sesión/,'Abrir la app pide la cuenta aunque exista una sesión anterior');
+assert(requests.includes('/api/logout'),'La sesión anterior se cierra al abrir la app');
+assert(!requests.includes('/api/content'),'No se carga contenido privado antes de iniciar sesión');
+await vm.runInContext("(async()=>{state.auth={loading:false,setupRequired:false,user:{id:'admin',username:'prueba',role:'admin'},csrf:'prueba',error:''};await loadContent();await loadQualityData();await loadUsers();await loadOfficeData();render();})()",context);
 const incomplete=vm.runInContext("qualityPageComplete({pages:[{type:'questions',questions:[{options:['Sí','No']},{options:['Sí','No']}]}]},0,{selected:[,0]})",context);
 assert.equal(incomplete,false,'La última respuesta no debe permitir saltar preguntas sin contestar');
 

@@ -47,4 +47,55 @@ html[data-theme="dark"] .answer-feedback,html[data-theme="dark"] .foam-data-titl
 
 .recipe-full-line td{white-space:nowrap;overflow-wrap:normal;font-size:clamp(5px,.58vw,11px);padding:5px 1px}.recipe-full-line th:last-child{width:8%}.recipe-full-line td .foam-pending{white-space:normal;font-size:clamp(5px,.52vw,9px)}
 
+/* Adaptación a pantallas, teclado y controles táctiles. */
+html{scrollbar-gutter:stable;scroll-padding-top:16px}
+body{min-width:0}
+img{max-width:100%}
+input,select,textarea{max-width:100%;min-width:0}
+textarea{font:inherit}
+button,a,input,select,textarea,summary{-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #1689b0;outline-offset:3px}
+.main>*{min-width:0}
+.panel,.quality-builder-question,.quality-builder-page,.quality-record-row,.inventory-row,.handover-area,.admin-list-item{min-width:0;overflow-wrap:anywhere}
+.sidebar{height:100dvh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.nav-link{min-height:44px}
+.recipe-readable{margin-top:16px;border-top:1px solid #cbd7db;padding-top:8px}
+.recipe-readable>summary{min-height:44px;display:list-item;align-content:center;font-size:14px;font-weight:700;cursor:pointer}
+.recipe-readable .recipe-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.recipe-readable dd{font-size:18px;overflow-wrap:anywhere}
+.auth-shell,.app-shell{min-height:100dvh}
+@media(max-width:900px){
+  .sidebar{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+  body:has(.sidebar.open){overflow:hidden}
+  .mobile-menu,.theme-toggle,.signout,.btn,.text-link,.admin-tab,.lesson-tab,.shift-tabs button,.calendar-head button,.foam-option,.foam-formulation{min-height:44px}
+  .mobile-menu{min-width:44px;width:44px;margin-right:4px;flex-shrink:0}
+  .theme-toggle{padding:6px 2px;flex-shrink:0}
+  .field input,.field select,.field textarea,input,select,textarea{font-size:16px}
+  .topbar{min-height:68px;height:auto;gap:6px;padding-top:max(8px,env(safe-area-inset-top));padding-bottom:8px;flex-wrap:wrap}
+  .top-right{gap:8px;min-width:0}
+  .crumbs{min-width:0;flex:1}
+  .crumbs strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .main{padding-bottom:max(55px,env(safe-area-inset-bottom));padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right))}
+  .quality-record-row{flex-wrap:wrap}
+  .quality-record-row time{white-space:normal}
+}
+@media(max-width:480px){
+  .topbar{padding-left:12px;padding-right:12px}
+  .top-right{margin-left:0;flex:0 0 100%;justify-content:flex-end}
+  .topbar .account-name{display:none}
+  .theme-toggle,.signout{font-size:12px}
+  .auth-side{min-height:0;padding:24px}
+  .auth-side h1{margin-top:24px;font-size:24px}
+  .auth-main{padding:20px 16px;align-items:start}
+  .auth-card{padding:24px 20px}
+  .recipe-variant{padding:12px}
+  .recipe-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .recipe-fields dd{font-size:17px}
+  .page-head,.section-top,.foam-result-heading{flex-wrap:wrap}
+  .quality-history,.quality-detail-panel,.quality-choice-card{padding:18px}
+}
+@media(max-height:500px) and (max-width:900px){.auth-side{display:none}.auth-main{padding:18px}.sidebar{padding-top:14px}.brand{margin-bottom:20px}.nav-group{margin-bottom:18px}}
+@media(hover:none){.btn:hover,.area-card:hover,.line-card:hover,.zone-row:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
 .foam-materials{margin-top:20px}.foam-materials small{font-size:16px;font-weight:600;margin-bottom:8px}.foam-materials ul{font-size:20px;line-height:1.65;padding-left:22px;margin-top:8px}.foam-materials li+li{margin-top:6px}
