@@ -43,9 +43,7 @@ html[data-theme="dark"] .answer-feedback,html[data-theme="dark"] .foam-data-titl
 
 .recipe-components-line{min-width:1250px;table-layout:auto}.recipe-components-line th,.recipe-components-line td{text-align:center;white-space:nowrap}.recipe-components-line thead tr:first-child th{background:var(--surface,#eef4f4);font-size:13px}.recipe-components-line tbody td{font-size:16px;font-weight:600}.recipe-components-line th:nth-child(2n),.recipe-components-line td{border-right:1px solid var(--border,#dce3e5)}.recipe-scroll-hint{font-size:12px;margin:8px 0;color:inherit}[data-theme=dark] .recipe-components-line thead tr:first-child th{background:#17282d}
 
-.recipe-card,.recipe-variant,.recipe-group{min-width:0;max-width:100%;box-sizing:border-box}.recipe-full-line-wrap{width:100%;max-width:100%;overflow:hidden}.recipe-full-line{width:100%;min-width:0;table-layout:fixed}.recipe-full-line th,.recipe-full-line td{padding:6px 2px;text-align:center;border:1px solid #cbd7db;white-space:normal;overflow-wrap:anywhere;vertical-align:middle}.recipe-full-line th{font-size:10px;line-height:1.3;background:#e7f0f0}.recipe-full-line th span{display:block}.recipe-full-line th small{display:block;margin-top:5px;font-size:9px}.recipe-full-line td{font-size:clamp(8px,.75vw,13px);font-weight:600}.recipe-full-line td .foam-pending{font-size:9px;font-weight:400}[data-theme=dark] .recipe-full-line th{background:#17282d}[data-theme=dark] .recipe-full-line th,[data-theme=dark] .recipe-full-line td{border-color:#33494f}
 
-.recipe-full-line td{white-space:nowrap;overflow-wrap:normal;font-size:clamp(5px,.58vw,11px);padding:5px 1px}.recipe-full-line th:last-child{width:8%}.recipe-full-line td .foam-pending{white-space:normal;font-size:clamp(5px,.52vw,9px)}
 
 /* Adaptación a pantallas, teclado y controles táctiles. */
 html{scrollbar-gutter:stable;scroll-padding-top:16px}
@@ -59,10 +57,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .panel,.quality-builder-question,.quality-builder-page,.quality-record-row,.inventory-row,.handover-area,.admin-list-item{min-width:0;overflow-wrap:anywhere}
 .sidebar{height:100dvh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .nav-link{min-height:44px}
-.recipe-readable{margin-top:16px;border-top:1px solid #cbd7db;padding-top:8px}
-.recipe-readable>summary{min-height:44px;display:list-item;align-content:center;font-size:14px;font-weight:700;cursor:pointer}
-.recipe-readable .recipe-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
-.recipe-readable dd{font-size:18px;overflow-wrap:anywhere}
 .auth-shell,.app-shell{min-height:100dvh}
 @media(max-width:900px){
   .sidebar{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
@@ -99,3 +93,24 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 .foam-materials{margin-top:20px}.foam-materials small{font-size:16px;font-weight:600;margin-bottom:8px}.foam-materials ul{font-size:20px;line-height:1.65;padding-left:22px;margin-top:8px}.foam-materials li+li{margin-top:6px}
+
+/* Ficha de receta: todos los valores legibles, sin cortar palabras. */
+.recipe-card,.recipe-variant,.recipe-group{min-width:0;max-width:100%;box-sizing:border-box}
+.recipe-specifications{display:grid;gap:24px;margin-top:16px}
+.recipe-spec-section{min-width:0}
+.recipe-spec-section h5{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px;line-height:1.5;font-weight:700;word-break:normal;overflow-wrap:normal}
+.recipe-spec-number{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;height:30px;border-radius:8px;background:#e3f1f3;color:#176177;font-size:12px;font-variant-numeric:tabular-nums}
+.recipe-spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px;margin:0}
+.recipe-spec-item{min-width:0;padding:16px 18px;border:1px solid var(--border,#dce3e5);border-radius:10px;background:var(--surface,#f3f5f5)}
+.recipe-spec-item dt{font-size:14px;font-weight:500;line-height:1.45;word-break:normal;overflow-wrap:normal;hyphens:none}
+.recipe-spec-item dt span{display:block}
+.recipe-spec-item dt small{display:block;margin-top:4px;color:var(--muted,#52666c);font-size:12px;font-weight:400;line-height:1.5}
+.recipe-spec-item dd{margin:12px 0 0;font-size:24px;line-height:1.3;font-weight:700;font-variant-numeric:tabular-nums;word-break:normal;overflow-wrap:normal;hyphens:none}
+.recipe-spec-item dd .foam-pending{font-size:15px}
+[data-theme=dark] .recipe-spec-item{background:#17282d;border-color:#33494f}
+[data-theme=dark] .recipe-spec-item dt small{color:#a9bbc3}
+[data-theme=dark] .recipe-spec-number{background:#233e46;color:#90d1e1}
+.recipe-group h4{font-size:18px;line-height:1.45;margin-bottom:16px;overflow-wrap:normal}
+.recipe-fields dt{font-size:14px;line-height:1.45;overflow-wrap:normal;hyphens:none}
+.recipe-fields dd{font-size:20px;line-height:1.4}
+@media(max-width:480px){.recipe-spec-grid,.recipe-fields{grid-template-columns:minmax(0,1fr)}.recipe-spec-item{padding:16px}.recipe-spec-item dd{font-size:24px}.recipe-specifications{gap:24px}}

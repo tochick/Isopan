@@ -16,7 +16,7 @@ for(const recipe of recipes){
     assert(html.includes(String(row.speed).replace('.',',')+' m/min'));
     assert(!html.includes('No hay una receta confirmada'));
     assert(!/<img/.test(html),'Las recetas deben mostrarse como datos, no como fotografías');
-    assert(html.includes('Línea completa de la receta'));
+    assert(html.includes('Datos de la receta'));
     assert(html.indexOf('Aire</span>')<html.indexOf('Caudal total</span>'));
     assert(html.indexOf('Caudal total</span>')<html.indexOf('N.º peine BASF</span>'));
   }
