@@ -13,8 +13,7 @@ function foamGreenRecipeLine(recipe,row,value){
     ['Inyector ISO','Medida',row.isoInjector],['Isocianato','kg/min',row.isoFlow],['Tipo ISO','',row.isoType||recipe.isoType],
     ['Caudal total','kg/min',row.total],['N.º peine BASF','Caja · longitud',row.basfComb]
   ];
-  const groups=[['Parámetros del proceso',0,7],['Componentes y dosificación',7,13],['Temperaturas e inyección',13,20],['Caudal y peine',20,22]];
-  return `<div class="recipe-specifications">${groups.map(([title,start,end],index)=>`<section class="recipe-spec-section" aria-label="${escapeHtml(title)}"><h5><span class="recipe-spec-number" aria-hidden="true">${String(index+1).padStart(2,'0')}</span>${escapeHtml(title)}</h5><dl class="recipe-spec-grid">${columns.slice(start,end).map(([name,unit,data])=>`<div class="recipe-spec-item"><dt><span>${escapeHtml(name)}</span>${unit?`<small>${escapeHtml(unit)}</small>`:''}</dt><dd>${value(data)}</dd></div>`).join('')}</dl></section>`).join('')}</div>`;
+  return `<dl class="recipe-spec-grid recipe-large-default" aria-label="Datos de la receta en grande">${columns.map(([name,unit,data])=>`<div class="recipe-spec-item"><dt><span>${escapeHtml(name)}</span>${unit?`<small>${escapeHtml(unit)}</small>`:''}</dt><dd>${value(data)}</dd></div>`).join('')}</dl>`;
 }
 function foamGreenRecipe(selection){
   const formulation=selection.formulation,next=selection.next;

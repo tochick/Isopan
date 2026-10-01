@@ -101,6 +101,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .recipe-spec-section h5{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px;line-height:1.5;font-weight:700;word-break:normal;overflow-wrap:normal}
 .recipe-spec-number{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;height:30px;border-radius:8px;background:#e3f1f3;color:#176177;font-size:12px;font-variant-numeric:tabular-nums}
 .recipe-spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px;margin:0}
+.recipe-large-default{margin-top:16px}
 .recipe-spec-item{min-width:0;padding:16px 18px;border:1px solid var(--border,#dce3e5);border-radius:10px;background:var(--surface,#f3f5f5)}
 .recipe-spec-item dt{font-size:14px;font-weight:500;line-height:1.45;word-break:normal;overflow-wrap:normal;hyphens:none}
 .recipe-spec-item dt span{display:block}

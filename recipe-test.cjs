@@ -38,4 +38,8 @@ if(recipes.length){
 context.state.foamGreenCatalog=[{family:'box',width:1000,thickness:50}];
 context.state.foamGreenRecipes=[{formulation:'FP1',family:'box',width:1000,source:'receta equivocada',rows:[{thickness:50}]}];
 assert(!render({formulation:'BCI',next:{family:'box',width:1000,thickness:50}}).includes('receta equivocada'));
+const large=context.foamGreenRecipeLine({expander:'Pentano'},{air:2.4,thickness:40,total:16.72,basfComb:'15 × 945'},data=>String(data??'Por confirmar'));
+assert(!/<table|<details/.test(large),'Los datos grandes deben aparecer directamente, sin tabla ni desplegable');
+assert.equal((large.match(/class="recipe-spec-item"/g)||[]).length,22,'Se conservan todos los campos de la receta');
+assert(large.includes('2.4')&&large.includes('16.72')&&large.includes('15 × 945'));
 console.log('Recetas: filtro por formulado, panel, ancho y espesor; variantes por velocidad correctas.');
