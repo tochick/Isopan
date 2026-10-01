@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Isopan",
+  "short_name": "Isopan",
+  "lang": "es",
+  "description": "Portal de Isopan",
+  "start_url": "./#/inicio",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f5f5",
+  "theme_color": "#087b94",
+  "icons": [
+    { "src": "./isopan-app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./isopan-app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

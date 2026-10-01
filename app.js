@@ -47,6 +47,8 @@ function resetPersonalState() {
   state.quiz={area:'all',items:[],index:0,answers:[],chosen:null,checked:false,phase:'setup'};
   Object.assign(state.office,{inventory:[],handovers:[],issues:[],incoming:null,message:'',drafts:{},maintenanceDrafts:{},issueDraft:null});
   state.home=null;state.news=[];state.mySuggestions=[];state.suggestions=[];state.users=[];state.foamGreenCatalog=[];state.foamGreen=null;
+  state.foamGreenBoxPhotos=[];
+  state.foamGreenRecipes=[];
   window.ISOPAN_PROCEDURES=[];window.ISOPAN_QUESTIONS=[];
   state.adminTab='portada';state.editNews=null;state.editGuide=null;state.editQuestion=null;state.editInventory=null;state.resetUser=null;
   state.adminMessage='';state.accountMessage='';state.homeMessage='';state.globalMessage='';
@@ -214,6 +216,8 @@ async function loadContent() {
   state.news = Array.isArray(content.news) ? content.news : [];
   state.mySuggestions = Array.isArray(content.mySuggestions) ? content.mySuggestions : [];
   state.foamGreenCatalog = Array.isArray(content.foamGreenCatalog) ? content.foamGreenCatalog : [];
+  state.foamGreenBoxPhotos = Array.isArray(content.foamGreenBoxPhotos) ? content.foamGreenBoxPhotos : [];
+  state.foamGreenRecipes = Array.isArray(content.foamGreenRecipes) ? content.foamGreenRecipes : [];
   window.ISOPAN_PROCEDURES = content.procedures;
   window.ISOPAN_QUESTIONS = content.questions;
 }

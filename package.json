@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "start": "node server.cjs",
-    "test": "node smoke-test.cjs && node server-test.cjs"
+    "test": "node smoke-test.cjs && node server-test.cjs && node recipe-test.cjs"
   },
   "engines": {
     "node": ">=18"

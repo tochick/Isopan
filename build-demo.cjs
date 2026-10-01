@@ -4,7 +4,7 @@ const root = __dirname;
 const output = path.join(root, 'demo-dist');
 fs.mkdirSync(output, { recursive: true });
 // Solo estos archivos públicos forman la demostración. No se lee data/.
-const assets = ['procedures.js', 'test-questions.js', 'learning-content.js', 'learning-expanded.js', 'foam-green.js', 'quality.js', 'isopan-icon.png', 'isopan-logo-official.png', 'demo-data.js'];
+const assets = ['procedures.js', 'test-questions.js', 'learning-content.js', 'learning-expanded.js', 'foam-green.js', 'quality.js', 'isopan-icon.png', 'isopan-logo-official.png', 'demo-data.js', 'manifest.webmanifest', 'isopan-app-192.png', 'isopan-app-512.png', 'isopan-apple-touch.png'];
 for (const name of assets) {
   if (name.endsWith('.js')) fs.writeFileSync(path.join(output, name), fs.readFileSync(path.join(root, name), 'utf8').replaceAll("'/docs/", "'./docs/"));
   else fs.copyFileSync(path.join(root, name), path.join(output, name));
@@ -19,7 +19,6 @@ app = app.replace('<button class="signout" data-logout>Cerrar sesión</button>',
 app += '\nconst demoRender = render; render = function(){ demoRender(); for(const input of document.querySelectorAll("input[type=password]")){ input.disabled=true; input.placeholder="No disponible en la demostración"; } };\n';
 fs.writeFileSync(path.join(output, 'app.js'), app);
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-html = html.replace('<body>', '<body><div class="demo-banner" role="status">DEMOSTRACIÓN VISUAL · Datos ficticios · No introduzcas contraseñas ni información interna</div>');
 html = html.replace('<script src="./app.js" defer>', '<script src="./demo-data.js" defer></script>\n    <script src="./app.js" defer>');
 fs.writeFileSync(path.join(output, 'index.html'), html);
 fs.writeFileSync(path.join(output, '.nojekyll'), '');

@@ -36,7 +36,7 @@ El **Buzón de sugerencias** permite a cualquier cuenta enviar una idea con su u
 
 La guía se muestra solo cuando área, línea y ambas referencias coinciden con un procedimiento aprobado. Si no hay coincidencia, la aplicación indica que la guía no está disponible y remite a la documentación vigente de planta. **No contiene pasos de operación inventados.**
 
-En **Espuma → Línea Verde**, el cambio permite elegir BCI, FP1 o KIMPUR y seleccionar los paneles por tipo, espesor y ancho. El catálogo diferencia Box (incluye las hojas llamadas Pared), Isoparette (Plissé) y Forzen. Los anchos no identificados permanecen aparte. Las recetas de formulado están pendientes de recibir datos y los ajustes históricos transcritos se muestran como pendientes de confirmación. No se publican las fotografías en la web.
+En **Espuma → Línea Verde**, el cambio permite elegir BCI, FP1 o KIMPUR y seleccionar los paneles por tipo, espesor y ancho. El catálogo diferencia Box (incluye las hojas llamadas Pared), Isoparete (Plissé) y Forzen. Los anchos no identificados permanecen aparte. Las recetas de BCI y FP1 se muestran como tablas por formulado, tipo de panel, ancho y espesor del panel siguiente, con sus filas diferenciadas por velocidad. Los documentos originales indican «En elaboración» y las transcripciones requieren validación. KIMPUR permanece pendiente; no se reutilizan recetas de otro ancho. Isoparete tiene un único ancho de 1000 mm. Los ajustes históricos transcritos se muestran como pendientes de confirmación. Las hojas originales de ajustes no se publican en la web. Para Box 1000 y 1155 se muestran las fotografías de referencia DX y SX, con acceso mediante sesión.
 
 ## Aprendizaje
 
@@ -86,6 +86,9 @@ El servidor limita los intentos de acceso, comprueba los permisos y el token de 
 ```text
 node smoke-test.cjs
 node server-test.cjs
+node recipe-test.cjs
 ```
 
 La primera comprueba navegación, borradores, calidad, mantenimiento, guías, test y el escape de contenido mostrado con una interfaz simulada. La segunda arranca un servidor de prueba con datos temporales y verifica cuentas, permisos, noticias, sugerencias, inventario, relevos, calidad, límites de peticiones, cabeceras de seguridad, cambios concurrentes y conservación de datos tras reiniciar. No sustituyen una prueba visual en navegador ni una prueba de cámara en un móvil. El logotipo y el icono se obtuvieron del [sitio oficial de Isopan](https://isopan.com/) y están incluidos localmente.
+
+Las fotos DX/SX y las transcripciones de recetas permanecen en `Base de datos/`, fuera del repositorio público. Para trasladar la instalación interna, copia también `Base de datos/Datos espuma verde/Fotos Box/` y `Base de datos/Recetas/recetas.json` mediante un canal interno. El servidor lee las recetas al arrancar.

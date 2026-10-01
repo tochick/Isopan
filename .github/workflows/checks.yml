@@ -20,3 +20,5 @@ jobs:
         run: node smoke-test.cjs
       - name: Comprobar servidor y permisos
         run: node server-test.cjs
+      - name: Comprobar selección de recetas
+        run: node recipe-test.cjs

@@ -1,34 +1,246 @@
 [
-  {"id":"ev01","family":"isoparette","thickness":35,"width":null,"file":"18.53.05 (1).jpeg"},
-  {"id":"ev02","family":"isoparette","thickness":40,"width":1000,"file":"18.53.05 (2).jpeg"},
-  {"id":"ev03","family":"forzen","thickness":100,"width":1120,"file":"18.53.05.jpeg"},
-  {"id":"ev04","family":"forzen","thickness":150,"width":1120,"file":"18.53.06 (1).jpeg"},
-  {"id":"ev05","family":"isoparette","thickness":60,"width":1000,"file":"18.53.06 (2).jpeg"},
-  {"id":"ev06","family":"isoparette","thickness":50,"width":1000,"file":"18.53.06 (3).jpeg"},
-  {"id":"ev07","family":"forzen","thickness":80,"width":1120,"file":"18.53.06 (4).jpeg","settings":{"sx":{"height":"136","opening":"15,64","materials":["Nastro anónimo 38","Nastro escrito 60"]},"dx":{"height":"140","opening":"65,20","materials":["Nastro anónimo 38","Guarnición 50"]}},"review":"Transcripción de ejemplo; confirmar antes de uso operativo."},
-  {"id":"ev08","family":"forzen","thickness":120,"width":1120,"file":"18.53.06 (5).jpeg"},
-  {"id":"ev09","family":"forzen","thickness":200,"width":1120,"file":"18.53.06.jpeg"},
-  {"id":"ev10","family":"box","thickness":60,"width":1000,"file":"18.53.07 (1).jpeg"},
-  {"id":"ev11","family":"box","thickness":50,"width":1155,"file":"18.53.07 (2).jpeg"},
-  {"id":"ev12","family":"box","thickness":30,"width":1155,"file":"18.53.07 (3).jpeg"},
-  {"id":"ev13","family":"box","thickness":50,"width":1000,"file":"18.53.07 (4).jpeg"},
-  {"id":"ev14","family":"box","thickness":40,"width":1000,"file":"18.53.07 (5).jpeg"},
-  {"id":"ev15","family":"box","thickness":30,"width":1000,"file":"18.53.07 (6).jpeg"},
-  {"id":"ev16","family":"forzen","thickness":200,"width":1000,"file":"18.53.07 (7).jpeg"},
-  {"id":"ev17","family":"isoparette","thickness":80,"width":1000,"file":"18.53.07 (8).jpeg"},
-  {"id":"ev18","family":"isoparette","thickness":100,"width":1000,"file":"18.53.07.jpeg"},
-  {"id":"ev19","family":"forzen","thickness":100,"width":1150,"file":"18.53.08 (1).jpeg"},
-  {"id":"ev20","family":"forzen","thickness":120,"width":1150,"file":"18.53.08 (2).jpeg"},
-  {"id":"ev21","family":"forzen","thickness":80,"width":null,"file":"18.53.08 (3).jpeg"},
-  {"id":"ev22","family":"forzen","thickness":150,"width":null,"file":"18.53.08 (4).jpeg"},
-  {"id":"ev23","family":"isoparette","thickness":120,"width":null,"file":"18.53.08 (5).jpeg"},
-  {"id":"ev24","family":"forzen","thickness":80,"width":null,"file":"18.53.08.jpeg","note":"La misma hoja menciona 1150 y 1120; confirmar a qué datos corresponde cada ancho."},
-  {"id":"ev25","family":"box","thickness":60,"width":1155,"file":"18.53.09 (1).jpeg"},
-  {"id":"ev26","family":"box","thickness":80,"width":null,"file":"18.53.09 (2).jpeg"},
-  {"id":"ev27","family":"forzen","thickness":200,"width":1150,"file":"18.53.09 (3).jpeg"},
-  {"id":"ev28","family":"forzen","thickness":100,"width":1000,"file":"18.53.09 (4).jpeg"},
-  {"id":"ev29","family":"forzen","thickness":150,"width":1150,"file":"18.53.09 (5).jpeg"},
-  {"id":"ev30","family":"box","thickness":40,"width":1155,"file":"18.53.09.jpeg"},
-  {"id":"ev31","family":"forzen","thickness":120,"width":1150,"file":"18.53.10 (1).jpeg"},
-  {"id":"ev32","family":"forzen","thickness":120,"width":1000,"file":"18.53.10.jpeg"}
+  {
+    "id": "ev01",
+    "family": "isoparette",
+    "thickness": 35,
+    "width": 1000,
+    "file": "18.53.05 (1).jpeg"
+  },
+  {
+    "id": "ev02",
+    "family": "isoparette",
+    "thickness": 40,
+    "width": 1000,
+    "file": "18.53.05 (2).jpeg"
+  },
+  {
+    "id": "ev03",
+    "family": "forzen",
+    "thickness": 100,
+    "width": 1120,
+    "file": "18.53.05.jpeg"
+  },
+  {
+    "id": "ev04",
+    "family": "forzen",
+    "thickness": 150,
+    "width": 1120,
+    "file": "18.53.06 (1).jpeg"
+  },
+  {
+    "id": "ev05",
+    "family": "isoparette",
+    "thickness": 60,
+    "width": 1000,
+    "file": "18.53.06 (2).jpeg"
+  },
+  {
+    "id": "ev06",
+    "family": "isoparette",
+    "thickness": 50,
+    "width": 1000,
+    "file": "18.53.06 (3).jpeg"
+  },
+  {
+    "id": "ev07",
+    "family": "forzen",
+    "thickness": 80,
+    "width": 1120,
+    "file": "18.53.06 (4).jpeg",
+    "settings": {
+      "sx": {
+        "height": "136",
+        "opening": "15,64",
+        "materials": [
+          "Nastro anónimo 38",
+          "Nastro escrito 60"
+        ]
+      },
+      "dx": {
+        "height": "140",
+        "opening": "65,20",
+        "materials": [
+          "Nastro anónimo 38",
+          "Guarnición 50"
+        ]
+      }
+    },
+    "review": "Transcripción de ejemplo; confirmar antes de uso operativo."
+  },
+  {
+    "id": "ev08",
+    "family": "forzen",
+    "thickness": 120,
+    "width": 1120,
+    "file": "18.53.06 (5).jpeg"
+  },
+  {
+    "id": "ev09",
+    "family": "forzen",
+    "thickness": 200,
+    "width": 1120,
+    "file": "18.53.06.jpeg"
+  },
+  {
+    "id": "ev10",
+    "family": "box",
+    "thickness": 60,
+    "width": 1000,
+    "file": "18.53.07 (1).jpeg"
+  },
+  {
+    "id": "ev11",
+    "family": "box",
+    "thickness": 50,
+    "width": 1155,
+    "file": "18.53.07 (2).jpeg"
+  },
+  {
+    "id": "ev12",
+    "family": "box",
+    "thickness": 30,
+    "width": 1155,
+    "file": "18.53.07 (3).jpeg"
+  },
+  {
+    "id": "ev13",
+    "family": "box",
+    "thickness": 50,
+    "width": 1000,
+    "file": "18.53.07 (4).jpeg"
+  },
+  {
+    "id": "ev14",
+    "family": "box",
+    "thickness": 40,
+    "width": 1000,
+    "file": "18.53.07 (5).jpeg"
+  },
+  {
+    "id": "ev15",
+    "family": "box",
+    "thickness": 30,
+    "width": 1000,
+    "file": "18.53.07 (6).jpeg"
+  },
+  {
+    "id": "ev16",
+    "family": "forzen",
+    "thickness": 200,
+    "width": 1000,
+    "file": "18.53.07 (7).jpeg"
+  },
+  {
+    "id": "ev17",
+    "family": "isoparette",
+    "thickness": 80,
+    "width": 1000,
+    "file": "18.53.07 (8).jpeg"
+  },
+  {
+    "id": "ev18",
+    "family": "isoparette",
+    "thickness": 100,
+    "width": 1000,
+    "file": "18.53.07.jpeg"
+  },
+  {
+    "id": "ev19",
+    "family": "forzen",
+    "thickness": 100,
+    "width": 1150,
+    "file": "18.53.08 (1).jpeg"
+  },
+  {
+    "id": "ev20",
+    "family": "forzen",
+    "thickness": 120,
+    "width": 1150,
+    "file": "18.53.08 (2).jpeg"
+  },
+  {
+    "id": "ev21",
+    "family": "forzen",
+    "thickness": 80,
+    "width": null,
+    "file": "18.53.08 (3).jpeg"
+  },
+  {
+    "id": "ev22",
+    "family": "forzen",
+    "thickness": 150,
+    "width": null,
+    "file": "18.53.08 (4).jpeg"
+  },
+  {
+    "id": "ev23",
+    "family": "isoparette",
+    "thickness": 120,
+    "width": 1000,
+    "file": "18.53.08 (5).jpeg"
+  },
+  {
+    "id": "ev24",
+    "family": "forzen",
+    "thickness": 80,
+    "width": null,
+    "file": "18.53.08.jpeg",
+    "note": "La misma hoja menciona 1150 y 1120; confirmar a qué datos corresponde cada ancho."
+  },
+  {
+    "id": "ev25",
+    "family": "box",
+    "thickness": 60,
+    "width": 1155,
+    "file": "18.53.09 (1).jpeg"
+  },
+  {
+    "id": "ev26",
+    "family": "box",
+    "thickness": 80,
+    "width": null,
+    "file": "18.53.09 (2).jpeg"
+  },
+  {
+    "id": "ev27",
+    "family": "forzen",
+    "thickness": 200,
+    "width": 1150,
+    "file": "18.53.09 (3).jpeg"
+  },
+  {
+    "id": "ev28",
+    "family": "forzen",
+    "thickness": 100,
+    "width": 1000,
+    "file": "18.53.09 (4).jpeg"
+  },
+  {
+    "id": "ev29",
+    "family": "forzen",
+    "thickness": 150,
+    "width": 1150,
+    "file": "18.53.09 (5).jpeg"
+  },
+  {
+    "id": "ev30",
+    "family": "box",
+    "thickness": 40,
+    "width": 1155,
+    "file": "18.53.09.jpeg"
+  },
+  {
+    "id": "ev31",
+    "family": "forzen",
+    "thickness": 120,
+    "width": 1150,
+    "file": "18.53.10 (1).jpeg"
+  },
+  {
+    "id": "ev32",
+    "family": "forzen",
+    "thickness": 120,
+    "width": 1000,
+    "file": "18.53.10.jpeg"
+  }
 ]

@@ -34,7 +34,11 @@ for (const name of ['procedures.js', 'test-questions.js', 'learning-content.js',
   assert(!fs.existsSync(path.join(dir, 'server.cjs')));
   assert(!fs.existsSync(path.join(dir, 'foam-green-readings.json')));
   assert(!fs.existsSync(path.join(dir, 'foam-green-catalog.json')));
-  assert.match(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), /DEMOSTRACIÓN VISUAL/);
+  assert.doesNotMatch(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), /demo-banner|DEMOSTRACIÓN VISUAL/);
+  assert.match(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), /apple-touch-icon/);
+  const manifest=JSON.parse(fs.readFileSync(path.join(dir,'manifest.webmanifest'),'utf8'));
+  assert.equal(manifest.start_url,'./#/inicio');
+  for(const icon of manifest.icons) assert(fs.existsSync(path.join(dir,icon.src)));
   for (const name of ['learning-content.js', 'learning-expanded.js']) assert.doesNotMatch(fs.readFileSync(path.join(dir, name), 'utf8'), /local='\/docs\/|local:'\/docs\//);
   console.log('Demostración: navegación, datos ficticios y bloqueo de escrituras correctos.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

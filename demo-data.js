@@ -28,7 +28,7 @@
     { type: 'photo', title: 'Segunda pantalla', prompt: 'Ejemplo de una segunda página de fotografía.', required: false },
     { type: 'photo', title: 'Última comprobación', prompt: 'Ejemplo de una tercera página de fotografía.', required: false }
   ] }));
-  const catalog = ['box', 'isoparette', 'forzen'].flatMap(family => [1000, 1120, 1150].map(width => ({ id: `demo-${family}-${width}`, family, thickness: 40, width, note: 'Variante ficticia para mostrar el selector. Sin ajustes operativos.' })));
+  const catalog = ['box', 'isoparette', 'forzen'].flatMap(family => (family==='isoparette'?[1000]:family==='box'?[1000,1120,1155]:[1000,1120,1150]).map(width => ({ id: `demo-${family}-${width}`, family, thickness: 40, width, note: 'Variante ficticia para mostrar el selector. Sin ajustes operativos.' })));
   window.ISOPAN_DEMO_API = async (url, method = 'GET') => {
     if (method !== 'GET') throw new Error('Vista de demostración: no se guardan cambios ni se crean cuentas.');
     const path = url.split('?')[0];

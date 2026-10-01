@@ -53,6 +53,12 @@ async function main() {
   const reader=await request('/api/login','POST',{username:'lector',password:'otra-clave-de-prueba-123'});
   assert.equal(reader.status,200);
   const readerSession={cookie:reader.cookie,csrf:reader.body.csrf};
+  assert.equal((await fetch(base+'/api/foam-green/box-photos/box-1')).status,401);
+  const boxPhoto=await fetch(base+'/api/foam-green/box-photos/box-1',{headers:{Cookie:reader.cookie}});
+  const hasBoxPhoto=fs.existsSync(path.join(__dirname,'Base de datos','Datos espuma verde','Fotos Box','Dx.jpeg'));
+  assert.equal(boxPhoto.status,hasBoxPhoto?200:404);
+  if(hasBoxPhoto){assert.equal(boxPhoto.headers.get('content-type'),'image/jpeg');assert.deepEqual(Buffer.from(await boxPhoto.arrayBuffer()),fs.readFileSync(path.join(__dirname,'Base de datos','Datos espuma verde','Fotos Box','Dx.jpeg')));}
+  assert.equal((await fetch(base+'/api/foam-green/box-photos/unknown',{headers:{Cookie:reader.cookie}})).status,404);
   assert.equal((await request('/api/users','GET',undefined,readerSession)).status,403);
   assert.equal((await request('/api/home','PUT',{intro:'Intento de cambio'},readerSession)).status,403);
   assert.equal((await request('/api/home','PUT',{intro:'Intento de cambio'},{cookie:admin.cookie})).status,403);
@@ -166,7 +172,9 @@ async function main() {
   assert.equal((await fetch(base+`/api/quality/photos/${firstPhoto}`,{headers:{Cookie:secondLogin.cookie}})).status,404);
   assert.equal(content.body.questions.length,1);
   assert.equal(content.body.procedures.length,1);
-  assert.equal(content.body.foamGreenCatalog.length,32);
+  assert.equal(content.body.foamGreenCatalog.filter(item=>/^ev\d+$/.test(item.id)).length,32);
+  assert(Array.isArray(content.body.foamGreenRecipes));
+  assert(content.body.foamGreenRecipes.every(recipe=>['BCI','FP1','KIMPUR'].includes(recipe.formulation)&&Array.isArray(recipe.rows)));
   assert.equal(content.body.foamGreenCatalog.find(item=>item.id==='ev25').width,1155);
   assert.equal(content.body.foamGreenCatalog.find(item=>item.id==='ev24').width,null);
   assert.equal(content.body.foamGreenCatalog.find(item=>item.id==='ev25').settings.sx.height,'109');

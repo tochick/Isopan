@@ -5,6 +5,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const root = __dirname;
+const foamGreenRecipes=require('./foam-recipes.cjs').loadRecipes();
+const boxPhotoDir = path.join(root, 'Base de datos', 'Datos espuma verde', 'Fotos Box');
+const boxPhotos = [['dx','Dx.jpeg'],['dx','Dx1.jpeg'],['dx','dx2.jpeg'],['sx','sx.jpeg'],['sx','sx1.jpeg']].map(([side,file],index)=>({id:`box-${index+1}`,side,file}));
 const foamGreenReadings = JSON.parse(fs.readFileSync(path.join(root, 'foam-green-readings.json'), 'utf8'));
 const foamGreenCatalog = JSON.parse(fs.readFileSync(path.join(root, 'foam-green-catalog.json'), 'utf8')).map(item => {
   const reading = foamGreenReadings[item.id];
@@ -268,7 +271,9 @@ function contentFor(user) {
   const admin = user.role === 'admin';
   return { home: db.home, news: [...db.news].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),
     mySuggestions: [...db.suggestions].filter(item=>item.authorId===user.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),
-    foamGreenCatalog: foamGreenCatalog.map(({file, ...item}) => item),
+    foamGreenCatalog: [...foamGreenCatalog.map(({file, ...item}) => item),...foamGreenRecipes.flatMap(recipe=>recipe.rows.filter(row=>!foamGreenCatalog.some(item=>item.family===recipe.family&&item.width===recipe.width&&item.thickness===row.thickness)).map(row=>({id:`recipe-${recipe.family}-${recipe.width}-${row.thickness}`,family:recipe.family,width:recipe.width,thickness:row.thickness,note:'Variante identificada en las tablas de recetas; ajustes de tapones pendientes.'})))].filter((item,index,list)=>list.findIndex(other=>other.id===item.id)===index),
+    foamGreenBoxPhotos: boxPhotos.filter(item=>fs.existsSync(path.join(boxPhotoDir,item.file))).map(({id,side})=>({id,side,url:`/api/foam-green/box-photos/${id}`})),
+    foamGreenRecipes,
     procedures: admin ? db.procedures : db.procedures.filter(p => p.status === 'approved'),
     questions: admin ? db.questions : db.questions.filter(q => q.status === 'approved') };
 }
@@ -332,6 +337,12 @@ async function api(req, res, url) {
   if (pathname === '/api/content' && req.method === 'GET') {
     const current = requireSession(req, res); if (!current) return;
     json(res, 200, contentFor(current.user)); return;
+  }
+  if (pathname.startsWith('/api/foam-green/box-photos/') && req.method === 'GET') {
+    if (!requireSession(req,res)) return;
+    const photo=boxPhotos.find(item=>pathname===`/api/foam-green/box-photos/${item.id}`);
+    if(!photo){error(res,404,'Fotografía no encontrada.');return;}
+    await sendFile(res,path.join(boxPhotoDir,photo.file),'image/jpeg');return;
   }
   if (pathname === '/api/quality/templates' && req.method === 'GET') {
     const current=requireSession(req,res);if(!current)return;
@@ -566,6 +577,10 @@ const files = new Map([
   ['/test-questions.js', ['test-questions.js','text/javascript; charset=utf-8']],
   ['/isopan-logo-official.png', ['isopan-logo-official.png','image/png']],
   ['/isopan-icon.png', ['isopan-icon.png','image/png']],
+  ['/manifest.webmanifest', ['manifest.webmanifest','application/manifest+json']],
+  ['/isopan-app-192.png', ['isopan-app-192.png','image/png']],
+  ['/isopan-app-512.png', ['isopan-app-512.png','image/png']],
+  ['/isopan-apple-touch.png', ['isopan-apple-touch.png','image/png']],
   ['/docs/pentano-insst.pdf',['docs/pentano-insst.pdf','application/pdf']],
   ['/docs/diisocianatos-insst.pdf',['docs/diisocianatos-insst.pdf','application/pdf']],
   ['/docs/cargas-insst.pdf',['docs/cargas-insst.pdf','application/pdf']],
