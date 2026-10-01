@@ -28,6 +28,10 @@ async function request(route,method='GET',body,session,origin=process.env.ISOPAN
   assert.equal((await request('/api/bootstrap','GET',undefined,undefined,'https://foreign.example')).status,403);
   assert.equal((await request('/api/login','OPTIONS')).headers.get('access-control-allow-origin'),process.env.ISOPAN_ALLOWED_ORIGIN);
   assert.equal((await request('/api/login','POST',null)).status,400);
+  let cancelled=false;
+  const stream=new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('x'.repeat(1_000_001)));},cancel(){cancelled=true;}});
+  const oversized=await edge.edgeRequest(new Request('https://fixture.supabase.co/functions/v1/isopan/api/login',{method:'POST',headers:{Origin:process.env.ISOPAN_ALLOWED_ORIGIN,'Content-Type':'application/json'},body:stream,duplex:'half'}));
+  assert.equal(oversized.status,413);assert(cancelled,'Una petición rechazada debe cancelar la lectura pendiente');
   const admin=(await request('/api/login','POST',{username:'admin',password})).data;
   assert(admin.sessionToken);assert.equal(saved.loginSessions.length,1);assert(!JSON.stringify(saved).includes(admin.sessionToken));
   // Un nuevo proceso debe reconocer la sesión sin depender de memoria anterior.

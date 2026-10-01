@@ -15,21 +15,22 @@ async function edgeRequest(request){
   try{await core.ready;}catch{return new Response(JSON.stringify({error:'El servidor no está disponible.'}),{status:503,headers:{...cors,'Content-Type':'application/json'}});}
   const req=new EventEmitter();req.headers=Object.fromEntries(request.headers);req.headers.host=url.host;
   req.method=request.method;req.url=route+url.search;req.socket={remoteAddress:request.headers.get('x-real-ip')||'remote'};req.destroyed=false;
-  let pumping=false;
+  let pumping=false,bodyReader,readingStopped=false;
   const on=req.on.bind(req);
   req.on=(event,listener)=>{
     on(event,listener);
     if(event==='data'&&!pumping){pumping=true;queueMicrotask(async()=>{
-      try{const reader=request.body?.getReader();if(reader){while(true){const {done,value}=await reader.read();if(done)break;req.emit('data',Buffer.from(value));}}req.emit('end');}
-      catch{req.emit('error',new Error('No se pudo leer la solicitud.'));}
+      try{bodyReader=request.body?.getReader();if(bodyReader){while(!readingStopped){const {done,value}=await bodyReader.read();if(done||readingStopped)break;req.emit('data',Buffer.from(value));}}if(!readingStopped)req.emit('end');}
+      catch{if(!readingStopped)req.emit('error',new Error('No se pudo leer la solicitud.'));}
     });}
     return req;
   };
   return new Promise(resolve=>{
     const res=new EventEmitter();res.headersSent=false;res.destroyed=false;let status=200;let headers={...cors};
+    const stopReading=()=>{readingStopped=true;bodyReader?.cancel().catch(()=>{});};
     res.writeHead=(code,values)=>{status=code;headers={...headers,...values};res.headersSent=true;};
-    res.end=bytes=>{res.headersSent=true;resolve(new Response(bytes,{status,headers}));};
-    res.destroy=()=>{res.destroyed=true;resolve(new Response(JSON.stringify({error:'Respuesta interrumpida.'}),{status:500,headers:{...cors,'Content-Type':'application/json'}}));};
+    res.end=bytes=>{res.headersSent=true;stopReading();resolve(new Response(bytes,{status,headers}));};
+    res.destroy=()=>{res.destroyed=true;stopReading();resolve(new Response(JSON.stringify({error:'Respuesta interrumpida.'}),{status:500,headers:{...cors,'Content-Type':'application/json'}}));};
     core.handler(req,res).catch(()=>res.destroy());
   });
 }
