@@ -1,5 +1,11 @@
 # Portal interno Isopan
 
+## Demostración visual online
+
+La demostración de GitHub Pages permite recorrer las pantallas con datos ficticios, sin servidor ni cuentas reales. No guarda cambios. No introduzcas información interna ni contraseñas. La app de uso interno sigue funcionando mediante `node server.cjs`.
+
+Para generar y comprobar la demostración: `node build-demo.cjs` y `node demo-test.cjs`. Se genera en `demo-dist/`, con una lista limitada de archivos públicos; no incluye cuentas, incidencias reales ni ajustes históricos de planta. El flujo de GitHub Pages publica únicamente esa carpeta.
+
 Aplicación interna para Producción, aprendizaje y contenidos de empresa. Se abre desde un servidor local o de la red de la empresa. Incluye cuentas con roles **administrador** y **solo lectura**. Los permisos de edición se comprueban en el servidor.
 
 ## Probar en este ordenador
