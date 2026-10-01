@@ -28,3 +28,5 @@ jobs:
         run: node edge-test.cjs
       - name: Comprobar archivos de publicación
         run: node site-test.cjs
+      - name: Comprobar recuperación de conexión
+        run: node connection-test.cjs

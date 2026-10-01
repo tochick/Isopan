@@ -33,7 +33,7 @@ const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = document.getElementById('app');
 const privateAssets = new Map();
-function publicApiBase(){return window.ISOPAN_API_BASE || '';}
+function publicApiBase(){return window.ISOPAN_API_BASE || (location.hostname==='tochick.github.io'?'https://bqjdtwrgtwgqyegbevtq.supabase.co/functions/v1/isopan':'');}
 function privateMediaAttributes(url, attribute='src'){
   return publicApiBase()?`data-private-${attribute}="${escapeHtml(url)}"`:`${attribute}="${escapeHtml(url)}"`;
 }
@@ -231,6 +231,7 @@ async function apiRequest(url, method='GET', body) {
   const sessionBound=!['/api/login','/api/setup','/api/bootstrap'].includes(url);
   const response = await fetch(publicApiBase()+url, {
     method, credentials: publicApiBase()?'omit':'same-origin',
+    cache:'no-store',
     headers: { ...(state.auth.sessionToken?{Authorization:'Bearer '+state.auth.sessionToken}:{}),...(method==='GET'?{}:{ 'Content-Type': 'application/json', 'X-CSRF-Token': state.auth.csrf || '' }) },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
@@ -283,7 +284,8 @@ async function initialize() {
     }
     if (bootstrap.user) { await loadContent(); await loadQualityData(); if (bootstrap.user.role==='admin') { await loadUsers(); await loadOfficeData(); } }
   } catch {
-    state.auth = { loading:false, setupRequired:false, user:null, csrf:null, error:'No se puede conectar con el servidor de Isopan. Abre la aplicación desde la dirección del servidor, no desde el archivo index.html.' };
+    const message=location.protocol==='file:'?'No se puede conectar con el servidor de Isopan. Abre la aplicación desde la dirección del servidor, no desde el archivo index.html.':publicApiBase()?'No se puede conectar con el servidor de Isopan. Comprueba tu conexión a Internet y pulsa Volver a intentar.':'No se puede conectar con el servidor de Isopan. Comprueba que el servidor local esté iniciado y pulsa Volver a intentar.';
+    state.auth = { loading:false, setupRequired:false, user:null, csrf:null, error:message,connectionError:true };
     resetPersonalState();
   }
   render();
@@ -291,7 +293,7 @@ async function initialize() {
 function authPage() {
   if (state.auth.loading) return `<div class="auth-loading">Cargando portal interno…</div>`;
   const setup=state.auth.setupRequired;
-  return `<div class="auth-shell"><div class="auth-side"><img src="./isopan-logo-official.png" alt="Isopan"><div><div class="eyebrow">PORTAL INTERNO</div><h1>Un acceso para cada persona.</h1><p>Producción, aprendizaje y contenidos de la empresa en un mismo espacio.</p></div><span>Isopan · Uso interno</span></div><main class="auth-main"><div class="auth-card"><div class="eyebrow">${setup?'CONFIGURACIÓN INICIAL':'ACCESO'}</div><h2>${setup?'Crear cuenta administradora':'Iniciar sesión'}</h2><p>${setup?'Esta cuenta inicial administrará usuarios y contenidos. Créala ahora para probar la aplicación; en el servidor de la empresa se configurará su propia instalación.':'Introduce tu cuenta para acceder al portal interno.'}</p>${state.auth.notice?`<div class="admin-message" role="status">${escapeHtml(state.auth.notice)}</div>`:''}${state.auth.error?`<div class="auth-error" role="alert">${escapeHtml(state.auth.error)}</div>`:''}${state.auth.error && state.auth.error.startsWith('No se puede conectar')?'':`<form id="${setup?'setup-form':'login-form'}" class="auth-form"><div class="field"><label for="auth-username">Usuario</label><input id="auth-username" name="username" autocomplete="username" minlength="3" maxlength="32" required></div><div class="field"><label for="auth-password">Contraseña</label><input id="auth-password" type="password" name="password" autocomplete="${setup?'new-password':'current-password'}" minlength="12" required></div>${setup?`<div class="field"><label for="auth-confirm">Repite la contraseña</label><input id="auth-confirm" type="password" name="confirm" autocomplete="new-password" minlength="12" required></div>`:''}<button class="btn btn-primary" type="submit">${setup?'Crear administrador':'Entrar'} ${icon('arrow')}</button></form>`}</div></main></div>`;
+  return `<div class="auth-shell"><div class="auth-side"><img src="./isopan-logo-official.png" alt="Isopan"><div><div class="eyebrow">PORTAL INTERNO</div><h1>Un acceso para cada persona.</h1><p>Producción, aprendizaje y contenidos de la empresa en un mismo espacio.</p></div><span>Isopan · Uso interno</span></div><main class="auth-main"><div class="auth-card"><div class="eyebrow">${setup?'CONFIGURACIÓN INICIAL':'ACCESO'}</div><h2>${setup?'Crear cuenta administradora':'Iniciar sesión'}</h2><p>${setup?'Esta cuenta inicial administrará usuarios y contenidos. Créala ahora para probar la aplicación; en el servidor de la empresa se configurará su propia instalación.':'Introduce tu cuenta para acceder al portal interno.'}</p>${state.auth.notice?`<div class="admin-message" role="status">${escapeHtml(state.auth.notice)}</div>`:''}${state.auth.error?`<div class="auth-error" role="alert">${escapeHtml(state.auth.error)}</div>`:''}${state.auth.connectionError?'<button class="btn btn-primary" type="button" data-retry-connection>Volver a intentar</button>':`<form id="${setup?'setup-form':'login-form'}" class="auth-form"><div class="field"><label for="auth-username">Usuario</label><input id="auth-username" name="username" autocomplete="username" minlength="3" maxlength="32" required></div><div class="field"><label for="auth-password">Contraseña</label><input id="auth-password" type="password" name="password" autocomplete="${setup?'new-password':'current-password'}" minlength="12" required></div>${setup?`<div class="field"><label for="auth-confirm">Repite la contraseña</label><input id="auth-confirm" type="password" name="confirm" autocomplete="new-password" minlength="12" required></div>`:''}<button class="btn btn-primary" type="submit">${setup?'Crear administrador':'Entrar'} ${icon('arrow')}</button></form>`}</div></main></div>`;
 }
 function accountPage() {
   return pageHead('Cuenta','Mi cuenta','Consulta tu acceso y actualiza tu contraseña.')+
@@ -410,6 +412,7 @@ document.addEventListener('focusin',event=>{
   if(field.matches?.('textarea,input:not([type]),input[type="text"],input[type="email"],input[type="search"],input[type="url"],input[type="tel"]')&&field.value&&!field.readOnly)field.select();
 });
 document.addEventListener('click',async event=>{
+  if(event.target.closest?.('[data-retry-connection]')){state.auth.loading=true;render();await initialize();return;}
   const privateLink=event.target.closest?.('a[data-private-href]');
   if(privateLink&&!privateLink.getAttribute('href')){
     event.preventDefault();const opened=window.open('about:blank','_blank');

@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "start": "node server.cjs",
-    "test": "node smoke-test.cjs && node server-test.cjs && node recipe-test.cjs && node supabase-test.cjs && node edge-test.cjs && node site-test.cjs",
+    "test": "node smoke-test.cjs && node server-test.cjs && node recipe-test.cjs && node supabase-test.cjs && node edge-test.cjs && node site-test.cjs && node connection-test.cjs",
     "check:supabase": "node supabase-connection.cjs"
   },
   "engines": {
